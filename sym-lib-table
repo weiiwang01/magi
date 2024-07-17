@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Magi")(type "KiCad")(uri "${KIPRJMOD}/Magi.kicad_sym")(options "")(descr ""))
+)

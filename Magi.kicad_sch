@@ -1,0 +1,366 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "603bad6a-1396-43ea-b48b-ecb87b0d1b8a")
+	(paper "A4")
+	(lib_symbols)
+	(text "Ethernet Switch"
+		(exclude_from_sim no)
+		(at 365.125 90.805 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0af00e18-1e41-46a5-95f8-a6fc91363a0f")
+	)
+	(sheet
+		(at 64.135 43.18)
+		(size 12.7 53.975)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "2860e5df-e451-43f4-a7e8-0b36615d93c3")
+		(property "Sheetname" "Unit 1A"
+			(at 64.135 42.4684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unit1A.kicad_sch"
+			(at 64.135 97.7396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 151.765 93.98)
+		(size 12.7 53.975)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "2d159031-f68b-43b5-a721-8e5485d62d9b")
+		(property "Sheetname" "Unit 2B"
+			(at 151.765 93.2684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unit2B.kicad_sch"
+			(at 151.765 148.5396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 88.9 43.18)
+		(size 12.7 53.975)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "3b967bcd-9ffe-4037-a92a-2215fe3b5544")
+		(property "Sheetname" "Unit 1B"
+			(at 88.9 42.4684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unit1B.kicad_sch"
+			(at 88.9 97.7396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 194.945 118.11)
+		(size 36.83 29.21)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "6da32745-3455-4721-bf5c-fc5d9de9e2ea")
+		(property "Sheetname" "Power"
+			(at 194.945 117.3984 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Power.kicad_sch"
+			(at 194.945 147.9046 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "10")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 126.365 93.98)
+		(size 12.7 53.975)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "6df4d1df-dbed-41ed-975f-2e2d6e7075d1")
+		(property "Sheetname" "Unit 2A"
+			(at 126.365 93.2684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unit2A.kicad_sch"
+			(at 126.365 148.5396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 192.405 43.18)
+		(size 12.7 53.975)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "7a0a5b71-0177-4e22-a21f-a281ba93075b")
+		(property "Sheetname" "Unit 3A"
+			(at 192.405 42.4684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unit3A.kicad_sch"
+			(at 192.405 97.7396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 217.805 43.18)
+		(size 12.7 53.975)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "ab90b902-2cb9-4d69-8234-a40350a2afc3")
+		(property "Sheetname" "Unit 3B"
+			(at 217.805 42.4684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unit3B.kicad_sch"
+			(at 217.805 97.7396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "7")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 63.5 120.015)
+		(size 37.465 28.575)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "cfbdeb49-e250-4720-afa3-fc8a465c8772")
+		(property "Sheetname" "Ethernet Switch"
+			(at 63.5 119.3034 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "EthernetSwitch.kicad_sch"
+			(at 63.5 149.1746 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "8")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 123.825 44.45)
+		(size 37.465 27.94)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "f34978e4-4de5-4afb-8503-644c3592cecc")
+		(property "Sheetname" "Control"
+			(at 123.825 43.7384 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Control.kicad_sch"
+			(at 123.825 72.9746 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Magi"
+				(path "/603bad6a-1396-43ea-b48b-ecb87b0d1b8a"
+					(page "9")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)

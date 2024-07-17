@@ -1,0 +1,13 @@
+(version 1)
+
+(rule rj45_edge_clearance
+    (constraint edge_clearance (min 0.29mm))
+    (condition "A.memberOfFootprint('Magi:RJ45-TH_MJ88B-B011-RVL11-P')")
+)
+
+(rule solder_jumper
+    (severity exclusion)
+    (constraint courtyard_clearance)
+    (condition "A.Reference == 'JP*' && B.Reference == 'J*'")
+)
+
