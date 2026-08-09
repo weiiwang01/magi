@@ -46,6 +46,8 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/adc.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
 )
 
 # Add include paths
