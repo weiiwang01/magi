@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "adc.h"
+#include "ws2812.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -106,6 +107,7 @@ int main(void)
   MX_UCPD2_Init();
   /* USER CODE BEGIN 2 */
   adc_init();
+  ws2812_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
