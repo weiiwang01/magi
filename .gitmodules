@@ -1,0 +1,3 @@
+[submodule "openwrt"]
+	path = firmware/openwrt
+	url = https://git.openwrt.org/openwrt/openwrt.git
