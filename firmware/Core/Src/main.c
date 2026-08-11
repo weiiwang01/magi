@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "adc.h"
 #include "log.h"
+#include "switch.h"
 #include "unit.h"
 #include "usb_hub.h"
 #include "ws2812.h"
@@ -111,11 +112,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
   log_init();
   adc_init();
-  if (usb_hub_init() != 0) {
-    Error_Handler();
-  }
+  usb_hub_init();
   ws2812_init();
   ws2812_set_rgb(0U, 16U, 16U, 16U);
+  switch_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

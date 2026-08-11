@@ -43,11 +43,36 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 # Add sources to executable
+set(RTL8367C_DRIVER_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/openwrt/target/linux/mediatek/files/drivers/net/phy/rtk/rtl8367c
+)
+set(RTL8367C_DRIVER_SOURCES
+    ${RTL8367C_DRIVER_DIR}/port.c
+    ${RTL8367C_DRIVER_DIR}/rate.c
+    ${RTL8367C_DRIVER_DIR}/rtk_switch.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_green.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_inbwctrl.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_lut.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_meter.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_mirror.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_misc.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_phy.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_port.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_portIsolation.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_rma.c
+    ${RTL8367C_DRIVER_DIR}/rtl8367c_asicdrv_scheduling.c
+)
+set_source_files_properties(${RTL8367C_DRIVER_SOURCES} PROPERTIES
+    COMPILE_OPTIONS "-Wno-incompatible-pointer-types"
+)
+
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/adc.c
     Core/Src/bitbang_i2c.c
     Core/Src/log.c
+    Core/Src/switch.c
     Core/Src/tiny_printf.c
     Core/Src/unit.c
     Core/Src/usb.c
@@ -57,11 +82,13 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart_ex.c
+    ${RTL8367C_DRIVER_SOURCES}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${RTL8367C_DRIVER_DIR}/include
 )
 
 # Add project symbols (macros)
