@@ -1,3 +1,6 @@
 [submodule "openwrt"]
 	path = firmware/Drivers/OpenWRT
 	url = https://git.openwrt.org/openwrt/openwrt.git
+[submodule "Middlewares/Third_Party/lwIP"]
+	path = firmware/Middlewares/Third_Party/lwIP
+	url = https://https.git.savannah.gnu.org/git/lwip.git
