@@ -23,6 +23,7 @@
 #include "usbpd.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "log.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -152,7 +153,7 @@ void DMA1_Channel2_3_IRQHandler(void)
 void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn 0 */
-
+  log_dma_irq();
   /* USER CODE END DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn 0 */
   /* USER CODE BEGIN DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn 1 */
 
@@ -174,5 +175,8 @@ void TIM17_FDCAN_IT1_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+void USART3_4_5_6_LPUART1_IRQHandler(void)
+{
+  log_uart_irq();
+}
 /* USER CODE END 1 */

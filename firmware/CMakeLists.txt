@@ -47,12 +47,16 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/adc.c
     Core/Src/bitbang_i2c.c
+    Core/Src/log.c
+    Core/Src/tiny_printf.c
     Core/Src/unit.c
     Core/Src/usb.c
     Core/Src/usb_hub.c
     Core/Src/ws2812.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart_ex.c
 )
 
 # Add include paths

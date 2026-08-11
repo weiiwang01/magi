@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "adc.h"
+#include "log.h"
 #include "unit.h"
 #include "usb_hub.h"
 #include "ws2812.h"
@@ -108,6 +109,7 @@ int main(void)
   MX_UCPD1_Init();
   MX_UCPD2_Init();
   /* USER CODE BEGIN 2 */
+  log_init();
   adc_init();
   if (usb_hub_init() != 0) {
     Error_Handler();
