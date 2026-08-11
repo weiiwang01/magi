@@ -44,7 +44,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 set(RTL8367C_DRIVER_DIR
-    ${CMAKE_CURRENT_SOURCE_DIR}/openwrt/target/linux/mediatek/files/drivers/net/phy/rtk/rtl8367c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/OpenWRT/target/linux/mediatek/files/drivers/net/phy/rtk/rtl8367c
 )
 set(RTL8367C_DRIVER_SOURCES
     ${RTL8367C_DRIVER_DIR}/port.c
