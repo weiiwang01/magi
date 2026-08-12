@@ -19,6 +19,7 @@ void unit_init();
 int unit_set_power(unit_t unit, bool enable);
 int unit_set_pcie_power(unit_t unit, bool enable);
 int unit_set_power_button(unit_t unit, bool enable);
+int unit_get_3v3(unit_t unit, bool *on);
 int unit_get_power_led(unit_t unit, bool *on);
 int unit_get_activity_led(unit_t unit, bool *on);
 
