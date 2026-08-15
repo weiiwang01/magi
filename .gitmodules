@@ -4,3 +4,12 @@
 [submodule "Middlewares/Third_Party/lwIP"]
 	path = firmware/Middlewares/Third_Party/lwIP
 	url = https://https.git.savannah.gnu.org/git/lwip.git
+[submodule "Middlewares/Third_Party/wolfSSL"]
+	path = firmware/Middlewares/Third_Party/wolfSSL
+	url = https://github.com/wolfSSL/wolfssl.git
+[submodule "Middlewares/Third_Party/wolfSSH"]
+	path = firmware/Middlewares/Third_Party/wolfSSH
+	url = https://github.com/wolfSSL/wolfssh.git
+[submodule "Drivers/cryptoauthlib"]
+	path = firmware/Drivers/cryptoauthlib
+	url = https://github.com/MicrochipTech/cryptoauthlib.git
