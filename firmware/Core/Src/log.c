@@ -1,100 +1,33 @@
-#include <stdbool.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "board.h"
+#include "fifo.h"
 #include "stm32g0xx_hal.h"
 #include "tiny_printf.h"
 
-#define LOG_RING_BUFFER_SIZE 4096
-
-typedef struct log_ring_buffer
-{
-  char buffer[LOG_RING_BUFFER_SIZE];
-  char *read;
-  char *write;
-  volatile bool dma;
-  volatile size_t dma_length;
-} log_ring_buffer_t;
+#define LOG_BUFFER_SIZE 1024
 
 static UART_HandleTypeDef log_uart;
 static DMA_HandleTypeDef log_dma;
 
-static log_ring_buffer_t log_buffer = { .buffer = { 0 },
-                                        .read = log_buffer.buffer,
-                                        .write = log_buffer.buffer,
-                                        .dma = false,
-                                        .dma_length = 0 };
-
-static void
-log_buffer_put(char c)
-{
-  char *next = log_buffer.write + 1;
-  if (next >= log_buffer.buffer + LOG_RING_BUFFER_SIZE)
-    {
-      next = log_buffer.buffer;
-    }
-  if (next == log_buffer.read)
-    {
-      return;
-    }
-  *log_buffer.write = c;
-  log_buffer.write = next;
-}
-
-static size_t
-log_buffer_continuous_read_length()
-{
-  if (log_buffer.write >= log_buffer.read)
-    {
-      return log_buffer.write - log_buffer.read;
-    }
-  return log_buffer.buffer + LOG_RING_BUFFER_SIZE - log_buffer.read;
-}
-
-static void
-log_buffer_mark_dma_end()
-{
-  log_buffer.read += log_buffer.dma_length;
-  if (log_buffer.read >= log_buffer.buffer + LOG_RING_BUFFER_SIZE)
-    {
-      log_buffer.read = log_buffer.buffer;
-    }
-  log_buffer.dma = false;
-}
-
-static size_t
-log_buffer_mark_dma_start()
-{
-  size_t dma_length = log_buffer_continuous_read_length();
-  if (dma_length == 0)
-    {
-      return 0;
-    }
-  log_buffer.dma_length = dma_length;
-  log_buffer.dma = true;
-  return dma_length;
-}
+static uint8_t log_storage[LOG_BUFFER_SIZE];
+static fifo_t log_buffer;
 
 static void
 log_start_dma()
 {
-  if (log_buffer.dma)
-    {
-      return;
-    }
-  size_t length = log_buffer_mark_dma_start();
+  uint8_t *data;
+  uint32_t length = fifo_dma_read(&log_buffer, &data, UINT16_MAX);
   if (length == 0)
     {
       return;
     }
 
-  if (HAL_UART_Transmit_DMA(
-          &log_uart, (uint8_t *)log_buffer.read, (uint16_t)length)
-      != HAL_OK)
+  if (HAL_UART_Transmit_DMA(&log_uart, data, (uint16_t)length) != HAL_OK)
     {
-      log_buffer.dma = false;
-      log_buffer.dma_length = 0U;
+      fifo_dma_read_done(&log_buffer, 0);
     }
 }
 
@@ -165,7 +98,8 @@ log_uart_init()
 void
 log_init()
 {
-  (void)log_uart_init();
+  fifo_init(&log_buffer, log_storage, sizeof log_storage);
+  log_uart_init();
 }
 
 void
@@ -190,7 +124,7 @@ HAL_UART_TxCpltCallback(UART_HandleTypeDef *uart)
 
   uint32_t prim = __get_PRIMASK();
   __disable_irq();
-  log_buffer_mark_dma_end();
+  fifo_dma_read_done(&log_buffer, uart->TxXferSize);
   log_start_dma();
   if (!prim)
     {
@@ -201,7 +135,7 @@ HAL_UART_TxCpltCallback(UART_HandleTypeDef *uart)
 static void
 log_tiny_putc(struct tiny_printf_info *info, char ch)
 {
-  log_buffer_put(ch);
+  fifo_putc(&log_buffer, (uint8_t)ch);
 }
 
 void
@@ -212,15 +146,15 @@ log_info_v(const char *logger, const char *format, va_list args)
 
   while (*logger)
     {
-      log_buffer_put(*logger++);
+      fifo_putc(&log_buffer, (uint8_t)*logger++);
     }
-  log_buffer_put(':');
-  log_buffer_put(' ');
+  fifo_putc(&log_buffer, ':');
+  fifo_putc(&log_buffer, ' ');
   struct tiny_printf_info info
       = { .bf = NULL, .zs = 0, .putc = log_tiny_putc };
   tiny_vprintf(&info, format, args);
-  log_buffer_put('\r');
-  log_buffer_put('\n');
+  fifo_putc(&log_buffer, '\r');
+  fifo_putc(&log_buffer, '\n');
   log_start_dma();
 
   if (!prim)
