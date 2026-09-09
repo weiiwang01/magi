@@ -25,6 +25,17 @@ typedef enum
   SWITCH_DUPLEX_FULL,
 } switch_duplex_t;
 
+typedef enum
+{
+  SWITCH_UTP_PORT0 = 0,
+  SWITCH_UTP_PORT1,
+  SWITCH_UTP_PORT2,
+  SWITCH_UTP_PORT3,
+  SWITCH_UTP_PORT4,
+
+  SWITCH_EXT_PORT0 = 16,
+} switch_port_t;
+
 typedef struct
 {
   bool link;
@@ -37,6 +48,6 @@ int switch_enable_sgmii(switch_protocol_t protocol,
                         switch_speed_t speed,
                         switch_duplex_t duplex);
 int switch_disable_sgmii();
-int switch_get_port_status(uint8_t port, switch_port_status_t *status);
+int switch_get_port_status(switch_port_t port, switch_port_status_t *status);
 
 #endif // SWITCH_H

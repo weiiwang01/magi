@@ -13,7 +13,6 @@
 #define SWITCH_SMI_DELAY_US 10U
 #define SWITCH_RESET_ASSERT_MS 500U
 #define SWITCH_RESET_STARTUP_MS 2000U
-#define SWITCH_SGMII_PORT EXT_PORT0
 
 static void
 switch_smi_delay()
@@ -424,20 +423,21 @@ switch_enable_sgmii(switch_protocol_t protocol,
 
   ability.duplex = port_duplex;
 
-  result = rtk_port_macForceLinkExt_set(SWITCH_SGMII_PORT, mode, &ability);
+  result = rtk_port_macForceLinkExt_set(
+      (rtk_port_t)SWITCH_EXT_PORT0, mode, &ability);
   if (result != RT_ERR_OK)
     {
       return result;
     }
 
-  result = rtk_port_sgmiiNway_set(SWITCH_SGMII_PORT,
+  result = rtk_port_sgmiiNway_set((rtk_port_t)SWITCH_EXT_PORT0,
                                   auto_negotiation ? ENABLED : DISABLED);
   if (result != RT_ERR_OK)
     {
       return result;
     }
 
-  return rtk_port_sds_reset(SWITCH_SGMII_PORT);
+  return rtk_port_sds_reset((rtk_port_t)SWITCH_EXT_PORT0);
 }
 
 int
@@ -446,28 +446,32 @@ switch_disable_sgmii()
   rtk_port_mac_ability_t ability = { 0 };
   rtk_api_ret_t result;
 
-  result = rtk_port_sgmiiNway_set(SWITCH_SGMII_PORT, DISABLED);
+  result = rtk_port_sgmiiNway_set((rtk_port_t)SWITCH_EXT_PORT0, DISABLED);
   if (result != RT_ERR_OK)
     {
       return result;
     }
 
   result = rtk_port_macForceLinkExt_set(
-      SWITCH_SGMII_PORT, MODE_EXT_DISABLE, &ability);
+      (rtk_port_t)SWITCH_EXT_PORT0, MODE_EXT_DISABLE, &ability);
   if (result != RT_ERR_OK)
     {
       return result;
     }
 
-  return rtk_port_sds_reset(SWITCH_SGMII_PORT);
+  return rtk_port_sds_reset((rtk_port_t)SWITCH_EXT_PORT0);
 }
 
 int
-switch_get_port_status(uint8_t port, switch_port_status_t *status)
+switch_get_port_status(switch_port_t port, switch_port_status_t *status)
 {
   rtk_port_linkStatus_t link;
   rtk_port_speed_t speed;
   rtk_port_duplex_t duplex;
+  rtk_port_mac_ability_t mac_status;
+  rtk_data_t signal_detect;
+  rtk_data_t sync;
+  rtk_data_t sgmii_link;
   switch_port_status_t port_status = { 0 };
   rtk_api_ret_t result;
 
@@ -476,13 +480,42 @@ switch_get_port_status(uint8_t port, switch_port_status_t *status)
       return RT_ERR_NULL_POINTER;
     }
 
-  result = rtk_port_phyStatus_get(port, &link, &speed, &duplex);
-  if (result != RT_ERR_OK)
+  if (port == SWITCH_EXT_PORT0)
     {
-      return result;
+      result = rtk_port_sgmiiLinkStatus_get(
+          (rtk_port_t)port,
+          &signal_detect,
+          &sync,
+          (rtk_port_linkStatus_t *)(void *)&sgmii_link);
+      if (result != RT_ERR_OK)
+        {
+          return result;
+        }
+      link = (rtk_port_linkStatus_t)sgmii_link;
+
+      result = rtk_port_macStatus_get((rtk_port_t)port, &mac_status);
+      if (result != RT_ERR_OK)
+        {
+          return result;
+        }
+
+      speed = (rtk_port_speed_t)mac_status.speed;
+      duplex = (rtk_port_duplex_t)mac_status.duplex;
+      port_status.link
+          = (signal_detect != 0U) && (sync != 0U) && (link == PORT_LINKUP);
+    }
+  else
+    {
+      result
+          = rtk_port_phyStatus_get((rtk_port_t)port, &link, &speed, &duplex);
+      if (result != RT_ERR_OK)
+        {
+          return result;
+        }
+
+      port_status.link = link == PORT_LINKUP;
     }
 
-  port_status.link = link == PORT_LINKUP;
   port_status.full_duplex = duplex == PORT_FULL_DUPLEX;
 
   switch (speed)
