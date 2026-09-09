@@ -32,6 +32,7 @@
 #endif /* _TRACE */
 #include "string.h"
 /* USER CODE BEGIN Include */
+#include "tcpm.h"
 
 /* USER CODE END Include */
 
@@ -115,7 +116,15 @@
 USBPD_StatusTypeDef USBPD_PWR_IF_Init(void)
 {
 /* USER CODE BEGIN USBPD_PWR_IF_Init */
-  return USBPD_ERROR;
+  for (uint32_t port = 0U; port < USBPD_PORT_COUNT; ++port)
+  {
+    if (BSP_ERROR_NONE != BSP_USBPD_PWR_VBUSInit(port))
+    {
+      return USBPD_ERROR;
+    }
+  }
+
+  return USBPD_OK;
 /* USER CODE END USBPD_PWR_IF_Init */
 }
 
@@ -353,7 +362,12 @@ uint8_t USBPD_PWR_IF_GetVBUSStatus(uint8_t PortNum, USBPD_VBUSPOWER_STATUS Power
     if (_vbus >= USBPD_PWR_HIGH_VBUS_THRESHOLD) _status = USBPD_TRUE;
     break;
   case USBPD_PWR_SNKDETACH:
-    if (_vbus < USBPD_PWR_HIGH_VBUS_THRESHOLD) _status = USBPD_TRUE;
+    if (((USBPD_PORT_1 == PortNum)
+         && tcpm_is_power_oring_active(tcpm, PortNum))
+        || (_vbus < USBPD_PWR_HIGH_VBUS_THRESHOLD))
+    {
+      _status = USBPD_TRUE;
+    }
     break;
   default :
     break;

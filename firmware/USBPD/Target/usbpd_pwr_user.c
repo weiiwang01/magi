@@ -27,7 +27,8 @@
 #endif /* _TRACE */
 
 /* USER CODE BEGIN include */
-
+#include "adc.h"
+#include "tcpm.h"
 /* USER CODE END include */
 
 /** @addtogroup BSP
@@ -86,7 +87,7 @@
   * @{
   */
 /* USER CODE BEGIN POWER_Private_Prototypes */
-
+static int32_t source_power_set(uint32_t instance, uint32_t voltage_mv, uint32_t operating_current_ma, uint32_t max_current_ma);
 /* USER CODE END POWER_Private_Prototypes */
 /**
   * @}
@@ -657,23 +658,12 @@ __weak int32_t BSP_USBPD_PWR_GetPowerMode(uint32_t Instance, USBPD_PWR_PowerMode
 __weak int32_t BSP_USBPD_PWR_VBUSInit(uint32_t Instance)
 {
   /* USER CODE BEGIN BSP_USBPD_PWR_VBUSInit */
-  /* Check if instance is valid       */
-  int32_t ret = BSP_ERROR_NONE;
-
   if (Instance >= USBPD_PWR_INSTANCES_NBR)
   {
-    ret = BSP_ERROR_WRONG_PARAM;
-  }
-  else
-  {
-    /* !!!
-      BSP_PWR_VBUSInit is obsolete. You may need to move your user code
-      inside this function
-    !!! */
-    PWR_DEBUG_TRACE(Instance, "ADVICE: Update BSP_USBPD_PWR_VBUSInit");
+    return BSP_ERROR_WRONG_PARAM;
   }
 
-  return ret;
+  return source_power_set(Instance, 0U, 0U, 0U);
   /* USER CODE END BSP_USBPD_PWR_VBUSInit */
 }
 
@@ -689,19 +679,12 @@ __weak int32_t BSP_USBPD_PWR_VBUSInit(uint32_t Instance)
 __weak int32_t BSP_USBPD_PWR_VBUSDeInit(uint32_t Instance)
 {
   /* USER CODE BEGIN BSP_USBPD_PWR_VBUSDeInit */
-  /* Check if instance is valid       */
-  int32_t ret = BSP_ERROR_FEATURE_NOT_SUPPORTED;
-
   if (Instance >= USBPD_PWR_INSTANCES_NBR)
   {
-    ret = BSP_ERROR_WRONG_PARAM;
+    return BSP_ERROR_WRONG_PARAM;
   }
-  /* !!!
-      BSP_PWR_VBUSDeInit is obsolete. You may need to move your user code
-      inside this function
-   !!! */
-  PWR_DEBUG_TRACE(Instance, "ADVICE: Update BSP_USBPD_PWR_VBUSDeInit");
-  return ret;
+
+  return source_power_set(Instance, 0U, 0U, 0U);
   /* USER CODE END BSP_USBPD_PWR_VBUSDeInit */
 }
 
@@ -716,23 +699,12 @@ __weak int32_t BSP_USBPD_PWR_VBUSDeInit(uint32_t Instance)
 __weak int32_t BSP_USBPD_PWR_VBUSOn(uint32_t Instance)
 {
   /* USER CODE BEGIN BSP_USBPD_PWR_VBUSOn */
-  /* Check if instance is valid       */
-  int32_t ret;
-
   if (Instance >= USBPD_PWR_INSTANCES_NBR)
   {
-    ret = BSP_ERROR_WRONG_PARAM;
+    return BSP_ERROR_WRONG_PARAM;
   }
-  else
-  {
-    ret = BSP_ERROR_FEATURE_NOT_SUPPORTED;
-    /* !!!
-        BSP_PWR_VBUSOn is obsolete. You may need to move your user code
-        inside this function
-     !!! */
-    PWR_DEBUG_TRACE(Instance, "ADVICE: Update BSP_USBPD_PWR_VBUSOn");
-  }
-  return ret;
+
+  return source_power_set(Instance, 5000U, 3000U, 3000U);
   /* USER CODE END BSP_USBPD_PWR_VBUSOn */
 }
 
@@ -747,23 +719,12 @@ __weak int32_t BSP_USBPD_PWR_VBUSOn(uint32_t Instance)
 __weak int32_t BSP_USBPD_PWR_VBUSOff(uint32_t Instance)
 {
   /* USER CODE BEGIN BSP_USBPD_PWR_VBUSOff */
-  /* Check if instance is valid       */
-  int32_t ret;
-
   if (Instance >= USBPD_PWR_INSTANCES_NBR)
   {
-    ret = BSP_ERROR_WRONG_PARAM;
+    return BSP_ERROR_WRONG_PARAM;
   }
-  else
-  {
-    ret = BSP_ERROR_FEATURE_NOT_SUPPORTED;
-    /* !!!
-        BSP_PWR_VBUSOff is obsolete. You may need to move your user code
-        inside this function
-     !!! */
-    PWR_DEBUG_TRACE(Instance, "ADVICE: Update BSP_USBPD_PWR_VBUSOff");
-  }
-  return ret;
+
+  return source_power_set(Instance, 0U, 0U, 0U);
   /* USER CODE END BSP_USBPD_PWR_VBUSOff */
 }
 
@@ -915,20 +876,13 @@ __weak int32_t BSP_USBPD_PWR_VBUSSetVoltage_APDO(uint32_t Instance,
 __weak int32_t BSP_USBPD_PWR_VBUSGetVoltage(uint32_t Instance, uint32_t *pVoltage)
 {
   /* USER CODE BEGIN BSP_USBPD_PWR_VBUSGetVoltage */
-  /* Check if instance is valid       */
-  int32_t ret = BSP_ERROR_NONE;
-
   if ((Instance >= USBPD_PWR_INSTANCES_NBR) || (NULL == pVoltage))
   {
-    ret = BSP_ERROR_WRONG_PARAM;
+    return BSP_ERROR_WRONG_PARAM;
   }
-  *pVoltage = 0u;
-  /* !!!
-      BSP_PWR_VBUSGetVoltage is obsolete. You may need to move your user code
-      inside this function
-   !!! */
-  PWR_DEBUG_TRACE(Instance, "ADVICE: Update BSP_USBPD_PWR_VBUSGetVoltage");
-  return ret;
+
+  *pVoltage = adc_get_usb_voltage((usb_t)Instance);
+  return BSP_ERROR_NONE;
   /* USER CODE END BSP_USBPD_PWR_VBUSGetVoltage */
 }
 
@@ -1279,7 +1233,16 @@ __weak void BSP_USBPD_PWR_EventCallback(uint32_t Instance)
   */
 
 /* USER CODE BEGIN POWER_Private_Functions */
-
+static int32_t source_power_set(uint32_t instance, uint32_t voltage_mv,
+                                uint32_t operating_current_ma, uint32_t max_current_ma)
+{
+  if (!tcpm_set_source_power(tcpm, (uint8_t)instance, voltage_mv,
+                             operating_current_ma, max_current_ma))
+  {
+    return BSP_ERROR_WRONG_PARAM;
+  }
+  return BSP_ERROR_NONE;
+}
 /* USER CODE END POWER_Private_Functions */
 
 /**

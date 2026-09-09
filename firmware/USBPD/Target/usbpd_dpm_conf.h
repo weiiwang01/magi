@@ -70,7 +70,7 @@ USBPD_SettingsTypeDef       DPM_Settings[USBPD_PORT_COUNT] =
     .PE_AttemptsDiscovSOP = USBPD_FALSE,        /*!< Can send a Discover Identity */
     .PE_PingSupport = USBPD_FALSE,              /* support Ping (only for PD3.0)                                            */
     .PE_CapscounterSupport = USBPD_FALSE,       /* support caps counter                                    */
-    .CAD_RoleToggle = USBPD_FALSE,               /* CAD role toggle                                         */
+    .CAD_RoleToggle = USBPD_TRUE,                /* CAD role toggle                                         */
     .CAD_DefaultResistor = 0x00u,
     .CAD_TryFeature = 0,              /* CAD try feature                                         */
     .CAD_AccesorySupport = USBPD_FALSE,         /* CAD accessory support                                   */
@@ -90,8 +90,8 @@ USBPD_SettingsTypeDef       DPM_Settings[USBPD_PORT_COUNT] =
       .Is_GetBattery_Supported          = USBPD_FALSE,  /*!< Get Battery Capabitity and Status messages supported by PE */
     },
 
-    .CAD_SRCToggleTime = 0,                    /* uint8_t CAD_SRCToggleTime; */
-    .CAD_SNKToggleTime = 0,                    /* uint8_t CAD_SNKToggleTime; */
+    .CAD_SRCToggleTime = 40,                   /* Source phase in ms; 80 ms DRP cycle. */
+    .CAD_SNKToggleTime = 40,                   /* Sink phase in ms.                   */
 #if USBPD_PORT_COUNT >= 2
   },
   {
@@ -99,12 +99,12 @@ USBPD_SettingsTypeDef       DPM_Settings[USBPD_PORT_COUNT] =
     .PE_SpecRevision = USBPD_SPECIFICATION_REV3,/* spec revision value                                     */
     .PE_DefaultRole = USBPD_PORTPOWERROLE_SNK,  /* Default port role                                       */
     .PE_RoleSwap = USBPD_TRUE,                 /* support port role swap                                  */
-    .PE_VDMSupport = USBPD_FALSE,
-    .PE_RespondsToDiscovSOP = USBPD_FALSE,      /*!< Can respond successfully to a Discover Identity */
-    .PE_AttemptsDiscovSOP = USBPD_FALSE,        /*!< Can send a Discover Identity */
+    .PE_VDMSupport = USBPD_TRUE,
+    .PE_RespondsToDiscovSOP = USBPD_TRUE,       /*!< Can respond successfully to a Discover Identity */
+    .PE_AttemptsDiscovSOP = USBPD_TRUE,         /*!< Can send a Discover Identity */
     .PE_PingSupport = USBPD_FALSE,              /* support Ping (only for PD3.0)                                     */
-    .PE_CapscounterSupport = USBPD_FALSE,       /* support caps counter                                    */
-    .CAD_RoleToggle = USBPD_FALSE,              /* CAD role toggle                                         */
+    .PE_CapscounterSupport = USBPD_TRUE,        /* Retry source capabilities before Type-C recovery       */
+    .CAD_RoleToggle = USBPD_TRUE,               /* CAD role toggle                                         */
     .CAD_DefaultResistor = 0x00u,
     .CAD_TryFeature = 0,              /* CAD try feature                                         */
     .CAD_AccesorySupport = USBPD_FALSE,         /* CAD accessory support                                   */
@@ -124,8 +124,8 @@ USBPD_SettingsTypeDef       DPM_Settings[USBPD_PORT_COUNT] =
       .Is_GetBattery_Supported          = USBPD_FALSE,  /*!< Get Battery Capabitity and Status messages supported by PE */
     },
 
-    .CAD_SRCToggleTime = 0,                    /* uint8_t CAD_SRCToggleTime; */
-    .CAD_SNKToggleTime = 0,                    /* uint8_t CAD_SNKToggleTime; */
+    .CAD_SRCToggleTime = 40,                   /* Source phase in ms; 80 ms DRP cycle. */
+    .CAD_SNKToggleTime = 40,                   /* Sink phase in ms.                   */
 #endif
   }
 };
