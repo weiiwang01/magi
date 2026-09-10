@@ -8,6 +8,7 @@
 #include <stdbool.h>
 
 #include "stm32g0xx_hal.h"
+#include "timeout.h"
 
 #define T_LOW 0U
 #define T_HIGH 1U
@@ -15,59 +16,6 @@
 #define T_HD_STA T_HIGH
 #define T_SU_STP T_HIGH
 #define T_BUF T_LOW
-
-#define NSEC_PER_SEC 1000000000ULL
-
-typedef struct
-{
-  uint32_t start_tick;
-  uint32_t timeout;
-} bitbang_i2c_timeout_t;
-
-static uint32_t
-ns_to_system_cycles(uint32_t ns)
-{
-  return (uint32_t)(((uint64_t)SystemCoreClock * ns / NSEC_PER_SEC) + 1U);
-}
-
-static bool
-timeout_expired(const bitbang_i2c_timeout_t *timeout)
-{
-  return (timeout->timeout != HAL_MAX_DELAY)
-         && ((timeout->timeout == 0U)
-             || ((HAL_GetTick() - timeout->start_tick) > timeout->timeout));
-}
-
-static void
-i2c_delay(uint32_t cycles_to_wait)
-{
-  uint32_t elapsed = 0U;
-
-  if (((SysTick->CTRL & SysTick_CTRL_ENABLE_Msk) != 0U)
-      && (SysTick->LOAD != 0U))
-    {
-      uint32_t previous = SysTick->VAL;
-      const uint32_t period = SysTick->LOAD + 1U;
-
-      while (elapsed < cycles_to_wait)
-        {
-          const uint32_t current = SysTick->VAL;
-          elapsed += (previous >= current) ? (previous - current)
-                                           : (previous + period - current);
-          previous = current;
-        }
-      return;
-    }
-
-  uint32_t iterations = (cycles_to_wait + 2U) / 3U;
-  __asm volatile(".syntax unified\n"
-                 "1:\n"
-                 "subs %[iterations], %[iterations], #1\n"
-                 "bne 1b\n"
-                 : [iterations] "+l"(iterations)
-                 :
-                 : "cc");
-}
 
 static int
 gpio_clock_enable(GPIO_TypeDef *port)
@@ -137,9 +85,7 @@ gpio_get(GPIO_TypeDef *port, uint32_t pin)
 }
 
 static int
-i2c_set_scl(bitbang_i2c_t *i2c,
-            bool state,
-            const bitbang_i2c_timeout_t *timeout)
+i2c_set_scl(bitbang_i2c_t *i2c, bool state, const timeout_t *timeout)
 {
   gpio_set(i2c->scl_port, i2c->scl_pin, state);
 
@@ -170,55 +116,53 @@ i2c_get_sda(bitbang_i2c_t *i2c)
 }
 
 static int
-i2c_start(bitbang_i2c_t *i2c, const bitbang_i2c_timeout_t *timeout)
+i2c_start(bitbang_i2c_t *i2c, const timeout_t *timeout)
 {
   int result;
 
   if (!i2c_get_sda(i2c))
     {
       (void)i2c_set_scl(i2c, false, timeout);
-      i2c_delay(i2c->delays[T_LOW]);
+      timeout_sleep_cycles(i2c->delays[T_LOW]);
       result = i2c_set_scl(i2c, true, timeout);
       if (result != 0)
         {
           return result;
         }
-      i2c_delay(i2c->delays[T_SU_STA]);
+      timeout_sleep_cycles(i2c->delays[T_SU_STA]);
     }
 
   i2c_set_sda(i2c, false);
-  i2c_delay(i2c->delays[T_HD_STA]);
+  timeout_sleep_cycles(i2c->delays[T_HD_STA]);
 
   (void)i2c_set_scl(i2c, false, timeout);
-  i2c_delay(i2c->delays[T_LOW]);
+  timeout_sleep_cycles(i2c->delays[T_LOW]);
   return timeout_expired(timeout) ? -ETIMEDOUT : 0;
 }
 
 static int
-i2c_stop(bitbang_i2c_t *i2c, const bitbang_i2c_timeout_t *timeout)
+i2c_stop(bitbang_i2c_t *i2c, const timeout_t *timeout)
 {
   int result;
 
   i2c_set_sda(i2c, false);
-  i2c_delay(i2c->delays[T_LOW]);
+  timeout_sleep_cycles(i2c->delays[T_LOW]);
 
   result = i2c_set_scl(i2c, true, timeout);
   if (result != 0)
     {
       return result;
     }
-  i2c_delay(i2c->delays[T_HIGH]);
+  timeout_sleep_cycles(i2c->delays[T_HIGH]);
 
-  i2c_delay(i2c->delays[T_SU_STP]);
+  timeout_sleep_cycles(i2c->delays[T_SU_STP]);
   i2c_set_sda(i2c, true);
-  i2c_delay(i2c->delays[T_BUF]);
+  timeout_sleep_cycles(i2c->delays[T_BUF]);
   return timeout_expired(timeout) ? -ETIMEDOUT : 0;
 }
 
 static int
-i2c_write_bit(bitbang_i2c_t *i2c,
-              bool bit,
-              const bitbang_i2c_timeout_t *timeout)
+i2c_write_bit(bitbang_i2c_t *i2c, bool bit, const timeout_t *timeout)
 {
   int result;
 
@@ -228,16 +172,14 @@ i2c_write_bit(bitbang_i2c_t *i2c,
     {
       return result;
     }
-  i2c_delay(i2c->delays[T_HIGH]);
+  timeout_sleep_cycles(i2c->delays[T_HIGH]);
   (void)i2c_set_scl(i2c, false, timeout);
-  i2c_delay(i2c->delays[T_LOW]);
+  timeout_sleep_cycles(i2c->delays[T_LOW]);
   return timeout_expired(timeout) ? -ETIMEDOUT : 0;
 }
 
 static int
-i2c_read_bit(bitbang_i2c_t *i2c,
-             bool *bit,
-             const bitbang_i2c_timeout_t *timeout)
+i2c_read_bit(bitbang_i2c_t *i2c, bool *bit, const timeout_t *timeout)
 {
   int result;
 
@@ -247,19 +189,17 @@ i2c_read_bit(bitbang_i2c_t *i2c,
     {
       return result;
     }
-  i2c_delay(i2c->delays[T_HIGH]);
+  timeout_sleep_cycles(i2c->delays[T_HIGH]);
 
   *bit = i2c_get_sda(i2c);
 
   (void)i2c_set_scl(i2c, false, timeout);
-  i2c_delay(i2c->delays[T_LOW]);
+  timeout_sleep_cycles(i2c->delays[T_LOW]);
   return timeout_expired(timeout) ? -ETIMEDOUT : 0;
 }
 
 static int
-i2c_write_byte(bitbang_i2c_t *i2c,
-               uint8_t byte,
-               const bitbang_i2c_timeout_t *timeout)
+i2c_write_byte(bitbang_i2c_t *i2c, uint8_t byte, const timeout_t *timeout)
 {
   uint8_t mask = 1U << 7;
   bool nack;
@@ -285,9 +225,7 @@ i2c_write_byte(bitbang_i2c_t *i2c,
 }
 
 static int
-i2c_read_byte(bitbang_i2c_t *i2c,
-              uint8_t *byte,
-              const bitbang_i2c_timeout_t *timeout)
+i2c_read_byte(bitbang_i2c_t *i2c, uint8_t *byte, const timeout_t *timeout)
 {
   unsigned int value = 1U;
   bool bit;
@@ -317,10 +255,8 @@ i2c_transfer(bitbang_i2c_t *i2c,
              bool read,
              uint32_t timeout_ms)
 {
-  const bitbang_i2c_timeout_t timeout = {
-    .start_tick = HAL_GetTick(),
-    .timeout = timeout_ms,
-  };
+  timeout_t timeout;
+  timeout_init(&timeout, timeout_ms);
   int result;
   int stop_result;
 
@@ -391,12 +327,12 @@ bitbang_i2c_init(bitbang_i2c_t *i2c, bitbang_i2c_speed_t speed)
   switch (speed)
     {
     case BITBANG_I2C_SPEED_STANDARD:
-      i2c->delays[T_LOW] = ns_to_system_cycles(4700U);
-      i2c->delays[T_HIGH] = ns_to_system_cycles(4000U);
+      i2c->delays[T_LOW] = TIMEOUT_NANOSECONDS_TO_CYCLES(4700U);
+      i2c->delays[T_HIGH] = TIMEOUT_NANOSECONDS_TO_CYCLES(4000U);
       break;
     case BITBANG_I2C_SPEED_FAST:
-      i2c->delays[T_LOW] = ns_to_system_cycles(1300U);
-      i2c->delays[T_HIGH] = ns_to_system_cycles(600U);
+      i2c->delays[T_LOW] = TIMEOUT_NANOSECONDS_TO_CYCLES(1300U);
+      i2c->delays[T_HIGH] = TIMEOUT_NANOSECONDS_TO_CYCLES(600U);
       break;
     default:
       return -ENOTSUP;

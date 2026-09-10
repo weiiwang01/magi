@@ -9,27 +9,16 @@
 #include "rtk_switch.h"
 #include "smi.h"
 #include "stm32g0xx_hal.h"
+#include "timeout.h"
 
-#define SWITCH_SMI_DELAY_US 10U
+#define SWITCH_SMI_DELAY_CYCLES 64U
 #define SWITCH_RESET_ASSERT_MS 500U
 #define SWITCH_RESET_STARTUP_MS 2000U
 
 static void
 switch_smi_delay()
 {
-  const uint32_t cycles
-      = (uint32_t)((((uint64_t)SystemCoreClock * SWITCH_SMI_DELAY_US)
-                    + 999999U)
-                   / 1000000U);
-  uint32_t iterations = (cycles + 2U) / 3U;
-
-  __asm volatile(".syntax unified\n"
-                 "1:\n"
-                 "subs %[iterations], %[iterations], #1\n"
-                 "bne 1b\n"
-                 : [iterations] "+l"(iterations)
-                 :
-                 : "cc");
+  timeout_sleep_cycles(SWITCH_SMI_DELAY_CYCLES);
 }
 
 static void
@@ -311,10 +300,10 @@ switch_gpio_init()
                     BOARD_SWITCH_SMI_SCL_GPIO_PIN);
   switch_smi_sda_input();
 
-  HAL_Delay(SWITCH_RESET_ASSERT_MS);
+  timeout_sleep_ms(SWITCH_RESET_ASSERT_MS);
   switch_gpio_set(
       BOARD_SWITCH_RESET_GPIO_PORT, BOARD_SWITCH_RESET_GPIO_PIN, true);
-  HAL_Delay(SWITCH_RESET_STARTUP_MS);
+  timeout_sleep_ms(SWITCH_RESET_STARTUP_MS);
 }
 
 int
