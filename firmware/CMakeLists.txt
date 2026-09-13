@@ -67,55 +67,29 @@ set_source_files_properties(${RTL8367C_DRIVER_SOURCES} PROPERTIES
     COMPILE_OPTIONS "-Wno-incompatible-pointer-types"
 )
 
-set(LWIP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/lwIP)
-set(LWIP_SOURCES
-    ${LWIP_DIR}/src/core/altcp.c
-    ${LWIP_DIR}/src/core/altcp_alloc.c
-    ${LWIP_DIR}/src/core/altcp_tcp.c
-    ${LWIP_DIR}/src/core/def.c
-    ${LWIP_DIR}/src/core/dns.c
-    ${LWIP_DIR}/src/core/inet_chksum.c
-    ${LWIP_DIR}/src/core/init.c
-    ${LWIP_DIR}/src/core/ip.c
-    ${LWIP_DIR}/src/core/mem.c
-    ${LWIP_DIR}/src/core/memp.c
-    ${LWIP_DIR}/src/core/netif.c
-    ${LWIP_DIR}/src/core/pbuf.c
-    ${LWIP_DIR}/src/core/raw.c
-    ${LWIP_DIR}/src/core/stats.c
-    ${LWIP_DIR}/src/core/sys.c
-    ${LWIP_DIR}/src/core/tcp.c
-    ${LWIP_DIR}/src/core/tcp_in.c
-    ${LWIP_DIR}/src/core/tcp_out.c
-    ${LWIP_DIR}/src/core/timeouts.c
-    ${LWIP_DIR}/src/core/udp.c
-    ${LWIP_DIR}/src/core/ipv4/acd.c
-    ${LWIP_DIR}/src/core/ipv4/autoip.c
-    ${LWIP_DIR}/src/core/ipv4/dhcp.c
-    ${LWIP_DIR}/src/core/ipv4/etharp.c
-    ${LWIP_DIR}/src/core/ipv4/icmp.c
-    ${LWIP_DIR}/src/core/ipv4/igmp.c
-    ${LWIP_DIR}/src/core/ipv4/ip4.c
-    ${LWIP_DIR}/src/core/ipv4/ip4_addr.c
-    ${LWIP_DIR}/src/core/ipv4/ip4_frag.c
-    ${LWIP_DIR}/src/api/api_lib.c
-    ${LWIP_DIR}/src/api/api_msg.c
-    ${LWIP_DIR}/src/api/err.c
-    ${LWIP_DIR}/src/api/if_api.c
-    ${LWIP_DIR}/src/api/netbuf.c
-    ${LWIP_DIR}/src/api/netdb.c
-    ${LWIP_DIR}/src/api/netifapi.c
-    ${LWIP_DIR}/src/api/sockets.c
-    ${LWIP_DIR}/src/api/tcpip.c
-    ${LWIP_DIR}/src/netif/ethernet.c
-    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+set(LWIP_DIR
+        ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/lwIP
 )
 
-add_library(lwip STATIC ${LWIP_SOURCES})
+include(${LWIP_DIR}/src/Filelists.cmake)
+
+add_library(lwip STATIC)
+
+target_sources(lwip PRIVATE
+        ${lwipcore_SRCS}
+        ${lwipcore4_SRCS}
+        ${lwipcore6_SRCS}
+        ${lwipapi_SRCS}
+        ${lwipmdns_SRCS}
+
+        ${LWIP_DIR}/src/netif/ethernet.c
+        ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+)
+
 target_include_directories(lwip PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc
-    ${LWIP_DIR}/src/include
-    ${LWIP_DIR}/contrib/ports/freertos/include
+        ${LWIP_DIR}/src/include
+        ${LWIP_DIR}/contrib/ports/freertos/include
+        ${PROJECT_SOURCE_DIR}/Core/Inc
 )
 target_link_libraries(lwip PUBLIC stm32cubemx)
 
@@ -123,8 +97,12 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/adc.c
     Core/Src/bitbang_i2c.c
+    Core/Src/cdc.c
+    Core/Src/cmd.c
     Core/Src/log.c
+    Core/Src/network.c
     Core/Src/switch.c
+    Core/Src/tcpm.c
     Core/Src/tiny_printf.c
     Core/Src/unit.c
     Core/Src/usb.c
@@ -132,6 +110,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/ws2812.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_spi.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_spi_ex.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart_ex.c
     ${RTL8367C_DRIVER_SOURCES}

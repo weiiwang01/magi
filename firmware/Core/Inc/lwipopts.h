@@ -67,6 +67,13 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* ---------- IPv4 options ---------- */
 #define LWIP_IPV4                1
+#define LWIP_IGMP                1
+
+/* ---------- IPv6 options ---------- */
+#define LWIP_IPV6                1
+#define LWIP_ICMP6               1
+#define LWIP_IPV6_AUTOCONFIG     1
+#define LWIP_IPV6_MLD            1
 
 /* ---------- TCP options ---------- */
 #define LWIP_TCP                1
@@ -107,6 +114,11 @@ a lot of data that needs to be copied, this should be set high. */
  * whenever the link changes (i.e., link down)
  */
 #define LWIP_NETIF_LINK_CALLBACK        1
+#define LWIP_NETIF_EXT_STATUS_CALLBACK  1
+#define LWIP_NUM_NETIF_CLIENT_DATA      1
+
+/* ---------- mDNS options ---------- */
+#define LWIP_MDNS_RESPONDER             1
 
 /*
    --------------------------------------
@@ -148,7 +160,7 @@ a lot of data that needs to be copied, this should be set high. */
 /**
  * LWIP_SOCKET==1: Enable Socket API (require to use sockets.c)
  */
-#define LWIP_SOCKET                     0
+#define LWIP_SOCKET                     1
 
 /*
    ------------------------------------
@@ -161,23 +173,13 @@ a lot of data that needs to be copied, this should be set high. */
 #define LWIP_NETIF_API                     1
 
 /*
-   ------------------------------------
-   ---------- httpd options ----------
-   ------------------------------------
-*/
-/** Set this to 1 to include "fsdata_custom.c" instead of "fsdata.c" for the
- * file system (to prevent changing the file included in CVS) */
-#define HTTPD_USE_CUSTOM_FSDATA   1
-
-
-/*
    ---------------------------------
    ---------- OS options ----------
    ---------------------------------
 */
 
 #define TCPIP_THREAD_NAME              "TCP/IP"
-#define TCPIP_THREAD_STACKSIZE          1000
+#define TCPIP_THREAD_STACKSIZE          3072
 #define TCPIP_MBOX_SIZE                 6
 #define DEFAULT_UDP_RECVMBOX_SIZE       6
 #define DEFAULT_TCP_RECVMBOX_SIZE       6
