@@ -29,11 +29,11 @@ typedef struct
 static StaticTask_t cdc_task_buffer;
 static StackType_t cdc_task_stack[CDC_TASK_STACK_SIZE];
 
-static uint32_t cdc_shell_exchange(stream_t *stream,
-                                   uint8_t *read_data,
-                                   bool read,
-                                   uint8_t write_data,
-                                   bool write);
+static stream_status_t cdc_shell_exchange(stream_t *stream,
+                                          uint8_t *read_data,
+                                          bool read,
+                                          uint8_t write_data,
+                                          bool write);
 
 static cdc_shell_t cdc_shell = {
   .stream = { .exchange = cdc_shell_exchange },
@@ -169,9 +169,7 @@ cdc_transmit(const uint8_t *data, uint16_t length)
 static void
 cdc_shell_task(void *argument)
 {
-  cmd_shell_t cmd_shell = {};
-  cmd_shell_init(&cmd_shell);
-  cmd_shell_run(&cmd_shell, &cdc_shell.stream);
+  cmd_shell(&cdc_shell.stream);
 }
 
 void
@@ -189,7 +187,7 @@ cdc_init()
     }
 }
 
-static uint32_t
+static stream_status_t
 cdc_shell_exchange(stream_t *stream,
                    uint8_t *read_data,
                    bool read,
@@ -203,7 +201,7 @@ cdc_shell_exchange(stream_t *stream,
 
   for (;;)
     {
-      uint32_t flags = 0;
+      stream_status_t status = 0;
       if (read)
         {
           taskENTER_CRITICAL();
@@ -215,19 +213,19 @@ cdc_shell_exchange(stream_t *stream,
                 {
                   USBD_CDC_ReceivePacket(cdc_shell.device);
                 }
-              flags |= STREAM_READ_OK;
+              status |= STREAM_READ_OK;
             }
           taskEXIT_CRITICAL();
         }
 
       if (write && cdc_transmit(&write_data, 1) == USBD_OK)
         {
-          flags |= STREAM_WRITE_OK;
+          status |= STREAM_WRITE_OK;
         }
 
-      if (flags != 0)
+      if (status != 0)
         {
-          return flags;
+          return status;
         }
 
       ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
