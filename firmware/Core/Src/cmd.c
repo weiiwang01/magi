@@ -90,10 +90,72 @@ cmd_magi_controller_temperature_encode(cmd_node_t *cmd, stream_t *stream)
                                                                           : 0;
 };
 
+static int
+cmd_magi_controller_echo_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  bool previous_cr = false;
+  while (true)
+    {
+      uint8_t c = 0;
+      stream_status_t result = stream_getc(stream, &c);
+      if (result & STREAM_ABORT)
+        {
+          return CMD_EXIT_INTERRUPT;
+        }
+      if (stream_error(result))
+        {
+          return CMD_EXIT_IOERR;
+        }
+      if (!(result & STREAM_READ_OK))
+        {
+          continue;
+        }
+      bool skip_lf = previous_cr && c == '\n';
+      previous_cr = c == '\r';
+      if (skip_lf)
+        {
+          continue;
+        }
+      if (c == 0x03)
+        {
+          return stream_error(stream_printf(stream, "^C\r\n"))
+                     ? CMD_EXIT_IOERR
+                     : CMD_EXIT_INTERRUPT;
+        }
+      if (c == '\r' || c == '\n')
+        {
+          if (stream_error(stream_printf(stream, "\r\n")))
+            {
+              return CMD_EXIT_IOERR;
+            }
+          continue;
+        }
+      do
+        {
+          result = stream_putc(stream, c);
+          if (result & STREAM_ABORT)
+            {
+              return CMD_EXIT_INTERRUPT;
+            }
+          if (stream_error(result))
+            {
+              return CMD_EXIT_IOERR;
+            }
+        }
+      while (!(result & STREAM_WRITE_OK));
+    }
+}
+
+static cmd_node_t cmd_magi_controller_echo = {
+  .symbol = "echo",
+  .exec = cmd_magi_controller_echo_exec,
+};
+
 static cmd_node_t cmd_magi_controller_hostname = {
   .symbol = "hostname",
   .encode = cmd_magi_controller_hostname_encode,
   .decode = cmd_magi_controller_hostname_decode,
+  .next = &cmd_magi_controller_echo,
 };
 
 static cmd_node_t cmd_magi_controller_temperature = {
@@ -188,6 +250,8 @@ typedef enum
 
 typedef struct
 {
+  stream_t *io;
+  cmd_line_t *line;
   cmd_node_t *cmd;
   cmd_state_t state;
   uint8_t symbol[CMD_SYMBOL_MAX + 2];
@@ -196,6 +260,12 @@ typedef struct
   cmd_error_t error;
   int exit_code;
 } cmd_exec_t;
+
+typedef struct
+{
+  cmd_exec_t *exec;
+  stream_t stream;
+} cmd_exec_stream_t;
 
 typedef struct
 {
@@ -246,6 +316,42 @@ cmd_line_stream_exchange(stream_t *stream,
   return result;
 }
 
+static stream_status_t
+cmd_exec_stream_exchange(stream_t *stream,
+                         uint8_t *read,
+                         uint8_t *write,
+                         stream_opts_t *opts)
+{
+  cmd_exec_stream_t *exec_stream
+      = container_of(stream, cmd_exec_stream_t, stream);
+  cmd_exec_t *exec = exec_stream->exec;
+  if (!read)
+    {
+      return exec->io->exchange(exec->io, NULL, write, opts);
+    }
+  while (true)
+    {
+      uint8_t c = 0;
+      stream_status_t result = exec->io->exchange(exec->io, &c, write, opts);
+      if (!(result & STREAM_READ_OK))
+        {
+          return result;
+        }
+      bool skip_lf = exec->line->new_line == '\r' && c == '\n';
+      exec->line->new_line = 0;
+      if (!skip_lf)
+        {
+          *read = c;
+          return result;
+        }
+      result &= ~STREAM_READ_OK;
+      if (result != 0)
+        {
+          return result;
+        }
+    }
+}
+
 static void
 cmd_line_init(cmd_line_t *line, stream_t *stream)
 {
@@ -276,6 +382,10 @@ cmd_line_readline(cmd_line_t *line)
       if (stream_error(result))
         {
           return CMD_LINE_ERROR;
+        }
+      if (!(result & STREAM_READ_OK))
+        {
+          continue;
         }
       bool skip_lf = line->new_line == '\r' && c == '\n';
       line->new_line = 0;
@@ -464,8 +574,9 @@ cmd_symbol_equal(const char *symbol, uint8_t *input, uint32_t n)
 }
 
 static cmd_symbol_result_t
-cmd_read_symbol(cmd_exec_t *exec, stream_t *stream)
+cmd_read_symbol(cmd_exec_t *exec)
 {
+  stream_t *stream = &exec->line->stream;
   uint8_t c = 0;
   stream_status_t result = 0;
   exec->symbol_len = 0;
@@ -534,10 +645,10 @@ cmd_search_node(cmd_node_t *cmd, uint8_t *input, uint32_t input_len)
 }
 
 static void
-cmd_sm_next_symbol(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_next_symbol(cmd_exec_t *exec)
 {
   cmd_symbol_result_t result = 0;
-  result = cmd_read_symbol(exec, stream);
+  result = cmd_read_symbol(exec);
   switch (result)
     {
     case CMD_SYMBOL_OK:
@@ -557,8 +668,9 @@ cmd_sm_next_symbol(cmd_exec_t *exec, stream_t *stream)
 }
 
 static void
-cmd_sm_error(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_error(cmd_exec_t *exec)
 {
+  stream_t *stream = &exec->line->stream;
   if (!exec->end)
     {
       uint8_t c = 0;
@@ -620,9 +732,9 @@ cmd_sm_error(cmd_exec_t *exec, stream_t *stream)
 }
 
 static void
-cmd_sm_walk(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_walk(cmd_exec_t *exec)
 {
-  cmd_sm_next_symbol(exec, stream);
+  cmd_sm_next_symbol(exec);
   if (exec->state != CMD_STATE_WALK)
     {
       return;
@@ -675,9 +787,9 @@ cmd_sm_walk(cmd_exec_t *exec, stream_t *stream)
 }
 
 static void
-cmd_sm_get_key(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_get_key(cmd_exec_t *exec)
 {
-  cmd_sm_next_symbol(exec, stream);
+  cmd_sm_next_symbol(exec);
   if (exec->state != CMD_STATE_GET_KEY)
     {
       return;
@@ -703,11 +815,11 @@ cmd_sm_get_key(cmd_exec_t *exec, stream_t *stream)
 }
 
 static void
-cmd_sm_get(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_get(cmd_exec_t *exec)
 {
   if (!exec->end)
     {
-      cmd_sm_next_symbol(exec, stream);
+      cmd_sm_next_symbol(exec);
       if (exec->state != CMD_STATE_GET)
         {
           return;
@@ -725,14 +837,14 @@ cmd_sm_get(cmd_exec_t *exec, stream_t *stream)
       exec->error = CMD_ERROR_UNSUPPORTED_OPERATION;
       return;
     }
-  exec->exit_code = exec->cmd->encode(exec->cmd, stream);
+  exec->exit_code = exec->cmd->encode(exec->cmd, &exec->line->stream);
   exec->state = CMD_STATE_DONE;
 }
 
 static void
-cmd_sm_set_key(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_set_key(cmd_exec_t *exec)
 {
-  cmd_sm_next_symbol(exec, stream);
+  cmd_sm_next_symbol(exec);
   if (exec->state != CMD_STATE_SET_KEY)
     {
       return;
@@ -757,7 +869,7 @@ cmd_sm_set_key(cmd_exec_t *exec, stream_t *stream)
 }
 
 static void
-cmd_sm_set(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_set(cmd_exec_t *exec)
 {
   if (exec->end)
     {
@@ -772,7 +884,7 @@ cmd_sm_set(cmd_exec_t *exec, stream_t *stream)
       return;
     }
   cmd_argument_t argument;
-  cmd_argument_init(&argument, stream, exec);
+  cmd_argument_init(&argument, &exec->line->stream, exec);
   exec->exit_code = exec->cmd->decode(exec->cmd, &argument.stream);
   if (exec->state == CMD_STATE_SET)
     {
@@ -781,7 +893,7 @@ cmd_sm_set(cmd_exec_t *exec, stream_t *stream)
 }
 
 static void
-cmd_sm_exec(cmd_exec_t *exec, stream_t *stream)
+cmd_sm_exec(cmd_exec_t *exec)
 {
   if (exec->cmd->exec == NULL)
     {
@@ -789,14 +901,21 @@ cmd_sm_exec(cmd_exec_t *exec, stream_t *stream)
       exec->error = CMD_ERROR_UNSUPPORTED_OPERATION;
       return;
     }
-  exec->exit_code = exec->cmd->exec(exec->cmd, stream);
+  cmd_exec_stream_t exec_stream = {
+    .exec = exec,
+    .stream = { .exchange = cmd_exec_stream_exchange },
+  };
+  exec->exit_code = exec->cmd->exec(exec->cmd, &exec_stream.stream);
   exec->state = CMD_STATE_DONE;
 }
 
 static int
-cmd_exec(stream_t *stream)
+cmd_exec(stream_t *io, cmd_line_t *line)
 {
-  cmd_exec_t exec = { 0 };
+  cmd_exec_t exec = {
+    .io = io,
+    .line = line,
+  };
 
   while (true)
     {
@@ -805,25 +924,25 @@ cmd_exec(stream_t *stream)
         case CMD_STATE_DONE:
           return exec.exit_code;
         case CMD_STATE_WALK:
-          cmd_sm_walk(&exec, stream);
+          cmd_sm_walk(&exec);
           break;
         case CMD_STATE_GET_KEY:
-          cmd_sm_get_key(&exec, stream);
+          cmd_sm_get_key(&exec);
           break;
         case CMD_STATE_GET:
-          cmd_sm_get(&exec, stream);
+          cmd_sm_get(&exec);
           break;
         case CMD_STATE_SET_KEY:
-          cmd_sm_set_key(&exec, stream);
+          cmd_sm_set_key(&exec);
           break;
         case CMD_STATE_SET:
-          cmd_sm_set(&exec, stream);
+          cmd_sm_set(&exec);
           break;
         case CMD_STATE_EXEC:
-          cmd_sm_exec(&exec, stream);
+          cmd_sm_exec(&exec);
           break;
         case CMD_STATE_ERROR:
-          cmd_sm_error(&exec, stream);
+          cmd_sm_error(&exec);
           break;
         }
     }
@@ -832,8 +951,8 @@ cmd_exec(stream_t *stream)
 void
 cmd_shell(stream_t *stream)
 {
-  cmd_line_t cmd_line = { 0 };
-  cmd_line_init(&cmd_line, stream);
+  cmd_line_t line;
+  cmd_line_init(&line, stream);
 
   while (true)
     {
@@ -843,10 +962,10 @@ cmd_shell(stream_t *stream)
         {
           return;
         }
-      switch (cmd_line_readline(&cmd_line))
+      switch (cmd_line_readline(&line))
         {
         case CMD_LINE_OK:
-          cmd_exec(&cmd_line.stream);
+          cmd_exec(stream, &line);
           break;
         case CMD_LINE_ABORT:
           break;
