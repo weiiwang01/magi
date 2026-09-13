@@ -208,10 +208,9 @@ typedef struct
 
 static stream_status_t
 cmd_line_stream_exchange(stream_t *stream,
-                         uint8_t *read_data,
-                         bool read,
-                         uint8_t write_data,
-                         bool write)
+                         uint8_t *read,
+                         uint8_t *write,
+                         stream_opts_t *opts)
 {
   cmd_line_t *line = container_of(stream, cmd_line_t, stream);
   stream_status_t result = 0;
@@ -220,7 +219,7 @@ cmd_line_stream_exchange(stream_t *stream,
     {
       if (line->read_count < line->write_count)
         {
-          *read_data = line->line[line->read_count];
+          *read = line->line[line->read_count];
           line->read_count += 1;
           result |= STREAM_READ_OK;
         }
@@ -231,7 +230,18 @@ cmd_line_stream_exchange(stream_t *stream,
     }
   if (write)
     {
-      result |= stream_putc(line->io, write_data);
+      stream_opts_t nonblocking;
+      if (opts != NULL)
+        {
+          nonblocking = *opts;
+        }
+      else
+        {
+          stream_opts_init(&nonblocking);
+        }
+      nonblocking.nonblocking = true;
+      result |= line->io->exchange(
+          line->io, NULL, write, result != 0 ? &nonblocking : opts);
     }
   return result;
 }
@@ -340,7 +350,8 @@ cmd_line_readline(cmd_line_t *line)
       bool write = true;
       do
         {
-          result = line->io->exchange(line->io, &next, read, c, write);
+          result = line->io->exchange(
+              line->io, read ? &next : NULL, write ? &c : NULL, NULL);
           if (result & STREAM_READ_OK)
             {
               read = false;
@@ -367,16 +378,27 @@ cmd_is_whitespace(uint8_t c)
 
 static stream_status_t
 cmd_argument_stream_exchange(stream_t *stream,
-                             uint8_t *read_data,
-                             bool read,
-                             uint8_t write_data,
-                             bool write)
+                             uint8_t *read,
+                             uint8_t *write,
+                             stream_opts_t *opts)
 {
   cmd_argument_t *argument = container_of(stream, cmd_argument_t, stream);
   if (!read || argument->status != 0)
     {
+      stream_opts_t nonblocking;
+      if (opts != NULL)
+        {
+          nonblocking = *opts;
+        }
+      else
+        {
+          stream_opts_init(&nonblocking);
+        }
+      nonblocking.nonblocking = true;
       stream_status_t result
-          = write ? stream_putc(argument->io, write_data) : 0;
+          = write ? argument->io->exchange(
+                        argument->io, NULL, write, read ? &nonblocking : opts)
+                  : 0;
       return result | (read ? argument->status : 0);
     }
 
@@ -384,7 +406,7 @@ cmd_argument_stream_exchange(stream_t *stream,
     {
       uint8_t c = 0;
       stream_status_t result
-          = argument->io->exchange(argument->io, &c, true, write_data, write);
+          = argument->io->exchange(argument->io, &c, write, opts);
       if (stream_error(result))
         {
           argument->status = result & ~(STREAM_READ_OK | STREAM_WRITE_OK);
@@ -415,7 +437,7 @@ cmd_argument_stream_exchange(stream_t *stream,
       else
         {
           argument->state = CMD_ARGUMENT_VALUE;
-          *read_data = c;
+          *read = c;
           return result;
         }
       if (result & STREAM_WRITE_OK)

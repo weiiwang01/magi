@@ -30,10 +30,9 @@ static StaticTask_t cdc_task_buffer;
 static StackType_t cdc_task_stack[CDC_TASK_STACK_SIZE];
 
 static stream_status_t cdc_shell_exchange(stream_t *stream,
-                                          uint8_t *read_data,
-                                          bool read,
-                                          uint8_t write_data,
-                                          bool write);
+                                          uint8_t *read,
+                                          uint8_t *write,
+                                          stream_opts_t *opts);
 
 static cdc_shell_t cdc_shell = {
   .stream = { .exchange = cdc_shell_exchange },
@@ -189,10 +188,9 @@ cdc_init()
 
 static stream_status_t
 cdc_shell_exchange(stream_t *stream,
-                   uint8_t *read_data,
-                   bool read,
-                   uint8_t write_data,
-                   bool write)
+                   uint8_t *read,
+                   uint8_t *write,
+                   stream_opts_t *opts)
 {
   if (!read && !write)
     {
@@ -207,7 +205,7 @@ cdc_shell_exchange(stream_t *stream,
           taskENTER_CRITICAL();
           if (cdc_shell.rx_count != 0)
             {
-              *read_data = cdc_shell.rx_buffer[cdc_shell.rx_offset++];
+              *read = cdc_shell.rx_buffer[cdc_shell.rx_offset++];
               cdc_shell.rx_count--;
               if (cdc_shell.rx_count == 0)
                 {
@@ -218,12 +216,12 @@ cdc_shell_exchange(stream_t *stream,
           taskEXIT_CRITICAL();
         }
 
-      if (write && cdc_transmit(&write_data, 1) == USBD_OK)
+      if (write && cdc_transmit(write, 1) == USBD_OK)
         {
           status |= STREAM_WRITE_OK;
         }
 
-      if (status != 0)
+      if (status != 0 || (opts != NULL && opts->nonblocking))
         {
           return status;
         }
