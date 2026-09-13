@@ -277,11 +277,38 @@ cmd_line_readline(cmd_line_t *line)
     }
   while (true)
     {
-      if (c == '\r' || c == '\n')
+      switch (c)
         {
+        case '\r':
+        case '\n':
           line->new_line = c;
           stream_puts(line->io, "\r\n");
           return CMD_LINE_OK;
+        case 0x03:
+          stream_puts(line->io, "^C\r\n");
+          return CMD_LINE_ABORT;
+        case '\b':
+        case 0x7f:
+          if (line->write_count > 0)
+            {
+              line->write_count--;
+              if (stream_error(stream_printf(line->io, "\b \b")))
+                {
+                  return CMD_LINE_ERROR;
+                }
+            }
+          do
+            {
+              result = stream_getc(line->io, &c);
+              if (stream_error(result))
+                {
+                  return CMD_LINE_ERROR;
+                }
+            }
+          while (!(result & STREAM_READ_OK));
+          continue;
+        default:
+          break;
         }
       if (line->write_count >= CMD_LINE_MAX)
         {
@@ -308,14 +335,6 @@ cmd_line_readline(cmd_line_t *line)
         }
       line->line[line->write_count] = c;
       line->write_count++;
-      switch (c)
-        {
-        case 0x03:
-          stream_puts(line->io, "^C\r\n");
-          return CMD_LINE_ABORT;
-        default:
-          break;
-        }
       uint8_t next = 0;
       bool read = true;
       bool write = true;
