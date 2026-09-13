@@ -9,9 +9,78 @@
 
 #define CMD_LINE_MAX 512
 #define CMD_SYMBOL_MAX 32
+#define CMD_HOSTNAME_MAX 32
 
 #define CMD_SYMBOL_GET "get"
 #define CMD_SYMBOL_SET "set"
+
+static char cmd_hostname[CMD_HOSTNAME_MAX + 1] = "magi";
+
+static int
+cmd_magi_controller_hostname_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return stream_error(stream_printf(stream, "%s\r\n", cmd_hostname))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_magi_controller_hostname_decode(cmd_node_t *cmd, stream_t *stream)
+{
+  char hostname[CMD_HOSTNAME_MAX + 1];
+  size_t length = 0;
+  bool overflow = false;
+  bool invalid_character = false;
+
+  while (true)
+    {
+      uint8_t c = 0;
+      stream_status_t result = stream_getc(stream, &c);
+      if (result & STREAM_ABORT)
+        {
+          return CMD_EXIT_INTERRUPT;
+        }
+      if (stream_error(result & ~STREAM_END))
+        {
+          return CMD_EXIT_IOERR;
+        }
+      if (result & STREAM_END)
+        {
+          break;
+        }
+      if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
+            || (c >= 'A' && c <= 'Z') || c == '-' || c == '_' || c == '.'))
+        {
+          invalid_character = true;
+        }
+      if (length == CMD_HOSTNAME_MAX)
+        {
+          overflow = true;
+        }
+      else
+        {
+          hostname[length++] = c;
+        }
+    }
+
+  if (length == 0 || overflow)
+    {
+      return stream_error(stream_printf(
+                 stream, "hostname must between 1 to 32 characters\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : 1;
+    }
+  if (invalid_character)
+    {
+      return stream_error(
+                 stream_printf(stream, "invalid characters in hostname\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : 1;
+    }
+  hostname[length] = '\0';
+  memcpy(cmd_hostname, hostname, length + 1);
+  return CMD_EXIT_OK;
+}
 
 static int
 cmd_magi_controller_temperature_encode(cmd_node_t *cmd, stream_t *stream)
@@ -19,6 +88,12 @@ cmd_magi_controller_temperature_encode(cmd_node_t *cmd, stream_t *stream)
   int32_t temp = adc_get_temperature();
   return stream_error(stream_printf(stream, "%ld deg C\r\n", (long)temp)) ? 1
                                                                           : 0;
+};
+
+static cmd_node_t cmd_magi_controller_hostname = {
+  .symbol = "hostname",
+  .encode = cmd_magi_controller_hostname_encode,
+  .decode = cmd_magi_controller_hostname_decode,
 };
 
 static cmd_node_t cmd_magi_controller_temperature = {
@@ -29,7 +104,7 @@ static cmd_node_t cmd_magi_controller_temperature = {
   .save = NULL,
   .exec = NULL,
   .child = NULL,
-  .next = NULL,
+  .next = &cmd_magi_controller_hostname,
 };
 
 static cmd_node_t cmd_magi_controller = {
@@ -94,15 +169,6 @@ typedef enum
   CMD_SYMBOL_ERROR,
 } cmd_symbol_result_t;
 
-typedef enum
-{
-  CMD_EXIT_OK = 0,
-  CMD_EXIT_MISUSE = 2,
-  CMD_EXIT_IOERR = 74,
-  CMD_EXIT_NOT_FOUND = 127,
-  CMD_EXIT_INTERRUPT = 130,
-} cmd_exit_code_t;
-
 typedef struct
 {
   uint8_t line[CMD_LINE_MAX];
@@ -112,6 +178,13 @@ typedef struct
   uint32_t read_count;
   stream_t stream;
 } cmd_line_t;
+
+typedef enum
+{
+  CMD_ARGUMENT_PREFIX = 0,
+  CMD_ARGUMENT_VALUE,
+  CMD_ARGUMENT_SUFFIX,
+} cmd_argument_state_t;
 
 typedef struct
 {
@@ -123,6 +196,15 @@ typedef struct
   cmd_error_t error;
   int exit_code;
 } cmd_exec_t;
+
+typedef struct
+{
+  stream_t *io;
+  cmd_exec_t *exec;
+  cmd_argument_state_t state;
+  stream_status_t status;
+  stream_t stream;
+} cmd_argument_t;
 
 static stream_status_t
 cmd_line_stream_exchange(stream_t *stream,
@@ -262,6 +344,76 @@ static bool
 cmd_is_whitespace(uint8_t c)
 {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+static stream_status_t
+cmd_argument_stream_exchange(stream_t *stream,
+                             uint8_t *read_data,
+                             bool read,
+                             uint8_t write_data,
+                             bool write)
+{
+  cmd_argument_t *argument = container_of(stream, cmd_argument_t, stream);
+  if (!read || argument->status != 0)
+    {
+      stream_status_t result
+          = write ? stream_putc(argument->io, write_data) : 0;
+      return result | (read ? argument->status : 0);
+    }
+
+  while (true)
+    {
+      uint8_t c = 0;
+      stream_status_t result
+          = argument->io->exchange(argument->io, &c, true, write_data, write);
+      if (stream_error(result))
+        {
+          argument->status = result & ~(STREAM_READ_OK | STREAM_WRITE_OK);
+          if (result & STREAM_END)
+            {
+              argument->exec->end = true;
+            }
+          return result & ~STREAM_READ_OK;
+        }
+      if (!(result & STREAM_READ_OK))
+        {
+          return result;
+        }
+      if (cmd_is_whitespace(c))
+        {
+          if (argument->state == CMD_ARGUMENT_VALUE)
+            {
+              argument->state = CMD_ARGUMENT_SUFFIX;
+            }
+        }
+      else if (argument->state == CMD_ARGUMENT_SUFFIX)
+        {
+          argument->exec->state = CMD_STATE_ERROR;
+          argument->exec->error = CMD_ERROR_INCORRECT_NUMBER_ARGUMENTS;
+          argument->status = STREAM_ABORT;
+          return (result & STREAM_WRITE_OK) | STREAM_ABORT;
+        }
+      else
+        {
+          argument->state = CMD_ARGUMENT_VALUE;
+          *read_data = c;
+          return result;
+        }
+      if (result & STREAM_WRITE_OK)
+        {
+          return STREAM_WRITE_OK;
+        }
+    }
+}
+
+static void
+cmd_argument_init(cmd_argument_t *argument, stream_t *stream, cmd_exec_t *exec)
+{
+  argument->io = stream;
+  argument->exec = exec;
+  argument->state = CMD_ARGUMENT_PREFIX;
+  argument->status = 0;
+  argument->stream.exchange = cmd_argument_stream_exchange;
 }
 
 static bool
@@ -578,8 +730,13 @@ cmd_sm_set(cmd_exec_t *exec, stream_t *stream)
       exec->error = CMD_ERROR_UNSUPPORTED_OPERATION;
       return;
     }
-  exec->exit_code = exec->cmd->decode(exec->cmd, stream);
-  exec->state = CMD_STATE_DONE;
+  cmd_argument_t argument;
+  cmd_argument_init(&argument, stream, exec);
+  exec->exit_code = exec->cmd->decode(exec->cmd, &argument.stream);
+  if (exec->state == CMD_STATE_SET)
+    {
+      exec->state = CMD_STATE_DONE;
+    }
 }
 
 static void
@@ -640,7 +797,7 @@ cmd_shell(stream_t *stream)
   while (true)
     {
       stream_status_t result = 0;
-      result = stream_printf(stream, "magi> ");
+      result = stream_printf(stream, "%s> ", cmd_hostname);
       if (stream_error(result))
         {
           return;

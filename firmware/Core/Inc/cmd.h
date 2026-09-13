@@ -7,7 +7,14 @@
 
 #include "stream.h"
 
-#define CMD_LABEL_MAX_LEN 32
+typedef enum
+{
+  CMD_EXIT_OK = 0,
+  CMD_EXIT_MISUSE = 2,
+  CMD_EXIT_IOERR = 74,
+  CMD_EXIT_NOT_FOUND = 127,
+  CMD_EXIT_INTERRUPT = 130,
+} cmd_exit_code_t;
 
 typedef struct cmd_node_t cmd_node_t;
 
