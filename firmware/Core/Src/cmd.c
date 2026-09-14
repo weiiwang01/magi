@@ -3,23 +3,24 @@
 #include "cmd.h"
 
 #include <string.h>
+#include <errno.h>
 
 #include "adc.h"
 #include "container_of.h"
+#include "network.h"
 
 #define CMD_LINE_MAX 512
 #define CMD_SYMBOL_MAX 32
-#define CMD_HOSTNAME_MAX 32
 
 #define CMD_SYMBOL_GET "get"
 #define CMD_SYMBOL_SET "set"
 
-static char cmd_hostname[CMD_HOSTNAME_MAX + 1] = "magi";
-
 static int
 cmd_magi_controller_hostname_encode(cmd_node_t *cmd, stream_t *stream)
 {
-  return stream_error(stream_printf(stream, "%s\r\n", cmd_hostname))
+  char hostname[NETWORK_HOSTNAME_MAX + 1];
+  network_get_hostname(hostname);
+  return stream_error(stream_printf(stream, "%s\r\n", hostname))
              ? CMD_EXIT_IOERR
              : CMD_EXIT_OK;
 }
@@ -27,59 +28,78 @@ cmd_magi_controller_hostname_encode(cmd_node_t *cmd, stream_t *stream)
 static int
 cmd_magi_controller_hostname_decode(cmd_node_t *cmd, stream_t *stream)
 {
-  char hostname[CMD_HOSTNAME_MAX + 1];
-  size_t length = 0;
-  bool overflow = false;
-  bool invalid_character = false;
+  char hostname[NETWORK_HOSTNAME_MAX + 1];
+  uint32_t length = 0;
+  stream_status_t result = 0;
 
-  while (true)
+  result = stream_gets(
+      stream, (uint8_t *)hostname, NETWORK_HOSTNAME_MAX + 1, &length);
+
+  if (result & STREAM_ABORT)
     {
-      uint8_t c = 0;
-      stream_status_t result = stream_getc(stream, &c);
-      if (result & STREAM_ABORT)
-        {
-          return CMD_EXIT_INTERRUPT;
-        }
-      if (stream_error(result & ~STREAM_END))
-        {
-          return CMD_EXIT_IOERR;
-        }
-      if (result & STREAM_END)
-        {
-          break;
-        }
-      if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z') || c == '-' || c == '_' || c == '.'))
-        {
-          invalid_character = true;
-        }
-      if (length == CMD_HOSTNAME_MAX)
-        {
-          overflow = true;
-        }
-      else
-        {
-          hostname[length++] = c;
-        }
+      return CMD_EXIT_INTERRUPT;
+    }
+  if (stream_error(result & ~STREAM_END))
+    {
+      return CMD_EXIT_IOERR;
     }
 
-  if (length == 0 || overflow)
+  if (length == 0 || length > NETWORK_HOSTNAME_MAX)
     {
       return stream_error(stream_printf(
                  stream, "hostname must between 1 to 32 characters\r\n"))
                  ? CMD_EXIT_IOERR
                  : 1;
     }
-  if (invalid_character)
+  hostname[length] = '\0';
+  int error = memchr(hostname, '\0', length) != NULL
+                  ? EINVAL
+                  : network_set_hostname(hostname);
+  if (error != 0)
     {
-      return stream_error(
-                 stream_printf(stream, "invalid characters in hostname\r\n"))
+      if (error == EINVAL)
+        {
+          return stream_error(stream_puts(stream, "hostname invalid\r\n"))
+                     ? CMD_EXIT_IOERR
+                     : 1;
+        }
+      return stream_error(stream_puts(stream, "failed to update hostname\r\n"))
                  ? CMD_EXIT_IOERR
                  : 1;
     }
-  hostname[length] = '\0';
-  memcpy(cmd_hostname, hostname, length + 1);
   return CMD_EXIT_OK;
+}
+
+static int
+cmd_network_address_encode(stream_t *stream, bool (*get_address)(char *))
+{
+  char value[NETWORK_ADDRESS_SIZE];
+  if (!get_address(value))
+    {
+      return stream_error(stream_printf(stream, "none\r\n")) ? CMD_EXIT_IOERR
+                                                             : 1;
+    }
+  return stream_error(stream_printf(stream, "%s\r\n", value)) ? CMD_EXIT_IOERR
+                                                              : CMD_EXIT_OK;
+}
+
+static int
+cmd_network_ipv4_address_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_network_address_encode(stream, network_get_ipv4_address);
+}
+
+static int
+cmd_network_ipv6_link_local_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_network_address_encode(stream,
+                                    network_get_ipv6_link_local_address);
+}
+
+static int
+cmd_network_ipv6_address_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_network_address_encode(stream, network_get_ipv6_address);
 }
 
 static int
@@ -146,9 +166,37 @@ cmd_magi_controller_echo_exec(cmd_node_t *cmd, stream_t *stream)
     }
 }
 
+static cmd_node_t cmd_network_ipv6_address = {
+  .symbol = "address",
+  .encode = cmd_network_ipv6_address_encode,
+};
+static cmd_node_t cmd_network_ipv6_link_local = {
+  .symbol = "link-local-address",
+  .encode = cmd_network_ipv6_link_local_encode,
+  .next = &cmd_network_ipv6_address,
+};
+static cmd_node_t cmd_network_ipv6 = {
+  .symbol = "ipv6",
+  .child = &cmd_network_ipv6_link_local,
+};
+static cmd_node_t cmd_network_ipv4_address = {
+  .symbol = "address",
+  .encode = cmd_network_ipv4_address_encode,
+};
+static cmd_node_t cmd_network_ipv4 = {
+  .symbol = "ipv4",
+  .child = &cmd_network_ipv4_address,
+  .next = &cmd_network_ipv6,
+};
+static cmd_node_t cmd_magi_controller_network = {
+  .symbol = "network",
+  .child = &cmd_network_ipv4,
+};
+
 static cmd_node_t cmd_magi_controller_echo = {
   .symbol = "echo",
   .exec = cmd_magi_controller_echo_exec,
+  .next = &cmd_magi_controller_network,
 };
 
 static cmd_node_t cmd_magi_controller_hostname = {
@@ -161,34 +209,17 @@ static cmd_node_t cmd_magi_controller_hostname = {
 static cmd_node_t cmd_magi_controller_temperature = {
   .symbol = "temperature",
   .encode = &cmd_magi_controller_temperature_encode,
-  .decode = NULL,
-  .load = NULL,
-  .save = NULL,
-  .exec = NULL,
-  .child = NULL,
   .next = &cmd_magi_controller_hostname,
 };
 
 static cmd_node_t cmd_magi_controller = {
   .symbol = "controller",
-  .encode = NULL,
-  .decode = NULL,
-  .load = NULL,
-  .save = NULL,
-  .exec = NULL,
   .child = &cmd_magi_controller_temperature,
-  .next = NULL,
 };
 
 static cmd_node_t cmd_root_instance = {
   .symbol = "magi",
-  .encode = NULL,
-  .decode = NULL,
-  .load = NULL,
-  .save = NULL,
-  .exec = NULL,
   .child = &cmd_magi_controller,
-  .next = NULL,
 };
 
 static cmd_node_t *cmd_root = &cmd_root_instance;
@@ -957,7 +988,9 @@ cmd_shell(stream_t *stream)
   while (true)
     {
       stream_status_t result = 0;
-      result = stream_printf(stream, "%s> ", cmd_hostname);
+      char hostname[NETWORK_HOSTNAME_MAX + 1];
+      network_get_hostname(hostname);
+      result = stream_printf(stream, "%s> ", hostname);
       if (stream_error(result))
         {
           return;

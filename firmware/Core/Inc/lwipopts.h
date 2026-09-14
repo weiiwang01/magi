@@ -55,7 +55,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define MEMP_NUM_TCP_SEG        TCP_SND_QUEUELEN
 /* MEMP_NUM_SYS_TIMEOUT: the number of simulateously active
    timeouts. */
-#define MEMP_NUM_SYS_TIMEOUT    10
+#define MEMP_NUM_SYS_TIMEOUT    (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 16)
 
 
 /* ---------- Pbuf options ---------- */
@@ -74,6 +74,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define LWIP_ICMP6               1
 #define LWIP_IPV6_AUTOCONFIG     1
 #define LWIP_IPV6_MLD            1
+#define LWIP_IPV6_NUM_ADDRESSES  2
 
 /* ---------- TCP options ---------- */
 #define LWIP_TCP                1
@@ -114,11 +115,13 @@ a lot of data that needs to be copied, this should be set high. */
  * whenever the link changes (i.e., link down)
  */
 #define LWIP_NETIF_LINK_CALLBACK        1
+#define LWIP_NETIF_HOSTNAME             1
 #define LWIP_NETIF_EXT_STATUS_CALLBACK  1
 #define LWIP_NUM_NETIF_CLIENT_DATA      1
 
 /* ---------- mDNS options ---------- */
 #define LWIP_MDNS_RESPONDER             1
+#define LWIP_MDNS_SEARCH                0
 
 /*
    --------------------------------------
@@ -179,7 +182,9 @@ a lot of data that needs to be copied, this should be set high. */
 */
 
 #define TCPIP_THREAD_NAME              "TCP/IP"
-#define TCPIP_THREAD_STACKSIZE          3072
+#define LWIP_TCPIP_CORE_LOCKING         1
+#define LWIP_TCPIP_CORE_LOCKING_INPUT   0
+#define TCPIP_THREAD_STACKSIZE          4096
 #define TCPIP_MBOX_SIZE                 6
 #define DEFAULT_UDP_RECVMBOX_SIZE       6
 #define DEFAULT_TCP_RECVMBOX_SIZE       6

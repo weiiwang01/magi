@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "log.h"
+#include "network.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -175,6 +176,11 @@ void TIM17_FDCAN_IT1_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+void EXTI4_15_IRQHandler(void)
+{
+  network_exti_irq();
+}
+
 void USART3_4_5_6_LPUART1_IRQHandler(void)
 {
   log_uart_irq();

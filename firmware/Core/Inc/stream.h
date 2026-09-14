@@ -98,6 +98,38 @@ stream_getc(stream_t *stream, uint8_t *c)
 }
 
 static stream_status_t
+stream_gets(stream_t *stream, uint8_t *s, uint32_t n, uint32_t *got)
+{
+  stream_status_t result = 0;
+  for (uint32_t i = 0; i < n; i++)
+    {
+      result = stream_getc(stream, s);
+      if (!(result & STREAM_READ_OK))
+        {
+          return result;
+        }
+      s += 1;
+      *got = i + 1;
+    }
+  return result;
+}
+
+static stream_status_t
+stream_drain(stream_t *stream)
+{
+  stream_status_t result = 0;
+  uint8_t c = 0;
+  while (true)
+    {
+      result = stream_getc(stream, &c);
+      if (stream_error(result))
+        {
+          return result;
+        }
+    }
+}
+
+static stream_status_t
 stream_vprintf(stream_t *stream, const char *format, va_list args)
 {
   stream_tiny_printf_t context = {

@@ -108,6 +108,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/usb.c
     Core/Src/usb_hub.c
     Core/Src/ws2812.c
+    Drivers/ch390-lwip/ch390.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_spi.c
@@ -121,6 +122,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${RTL8367C_DRIVER_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/ch390-lwip
 )
 
 # Add project symbols (macros)

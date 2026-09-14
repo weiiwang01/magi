@@ -17,6 +17,7 @@
 #include "ch390.h"
 
 #define CH390_RCR_ACTIVE (RCR_DIS_CRC | RCR_RXEN)
+#define CH390_TX_WAIT_RETRIES 100U
 
 static bool
 ch390_device_valid(const ch390_t *dev)
@@ -61,7 +62,15 @@ ch390_mac_filter_init(ch390_mac_filter_t *filter)
 static uint8_t
 ch390_mac_filter_index(const uint8_t mac[6])
 {
-  return (uint8_t)(ch390_crc32_le(~0u, mac, 6) & 0x3fu);
+  uint32_t crc = ~ch390_crc32_le(~0u, mac, 6);
+  uint8_t index = 0;
+
+  for (unsigned int bit = 0; bit < 6; ++bit)
+    {
+      index = (uint8_t)((index << 1) | (crc & 1U));
+      crc >>= 1;
+    }
+  return index;
 }
 
 static int
@@ -513,6 +522,7 @@ ch390_receive_nolock(ch390_t *dev, struct pbuf **packet)
           rtn = ch390_spi_discard(dev, CH390_MRCMD, len);
           if (rtn)
             return rtn;
+          continue;
         }
 
       break;
@@ -565,6 +575,7 @@ ch390_transmit(ch390_t *dev, struct pbuf *packet)
 {
   int ret = 0;
   uint8_t reg = 0;
+  unsigned int retries = 0;
 
   if (packet == NULL || packet->tot_len == 0
       || packet->tot_len > CH390_PKT_MAX)
@@ -572,17 +583,27 @@ ch390_transmit(ch390_t *dev, struct pbuf *packet)
 
   dev->chip->lock(dev->chip);
 
-  ret = ch390_spi_write_pbuf(dev, CH390_MWCMD, packet);
-  if (ret)
-    goto unlock;
-
   do
     {
       ret = ch390_read_reg(dev, CH390_TCR, &reg);
       if (ret)
         goto unlock;
+      if (reg & TCR_TXREQ)
+        {
+          if (retries >= CH390_TX_WAIT_RETRIES)
+            {
+              ret = ETIMEDOUT;
+              goto unlock;
+            }
+          retries += 1;
+          dev->chip->sleep(dev->chip, 1);
+        }
     }
   while (reg & TCR_TXREQ);
+
+  ret = ch390_spi_write_pbuf(dev, CH390_MWCMD, packet);
+  if (ret)
+    goto unlock;
 
   ret = ch390_write_reg(dev, CH390_TXPLL, (uint8_t)(packet->tot_len & 0xffu));
   if (ret)
@@ -742,7 +763,6 @@ ch390_irq_handler(ch390_t *dev)
   uint8_t isr = 0;
   int rtn = 0;
   int enable_rtn;
-  bool link_changed = false;
   struct pbuf *packet = NULL;
   err_t input_rtn;
 
@@ -756,36 +776,37 @@ ch390_irq_handler(ch390_t *dev)
   if (rtn)
     goto out;
 
-  link_changed = (isr & ISR_LNKCHG) != 0;
+  dev->link_change |= (isr & ISR_LNKCHG) != 0;
 
-  if (isr & ISR_PR)
-    {
-      while (true)
-        {
-          packet = NULL;
-          rtn = ch390_receive_nolock(dev, &packet);
-          if (rtn)
+  // Don't know if ISR_PR is edge or level triggered, treat it as edge
+  // triggered for safe if (isr & ISR_PR)
+  {
+    while (true)
+      {
+        packet = NULL;
+        rtn = ch390_receive_nolock(dev, &packet);
+        if (rtn)
+          goto out;
+        if (packet == NULL)
+          break;
+
+#if NO_SYS || LWIP_TCPIP_CORE_LOCKING_INPUT
+        dev->chip->unlock(dev->chip);
+#endif
+        input_rtn = dev->netif->input(packet, dev->netif);
+        if (input_rtn != ERR_OK)
+          pbuf_free(packet);
+#if NO_SYS || LWIP_TCPIP_CORE_LOCKING_INPUT
+        dev->chip->lock(dev->chip);
+#endif
+
+        if (input_rtn != ERR_OK)
+          {
+            rtn = EIO;
             goto out;
-          if (packet == NULL)
-            break;
-
-#if NO_SYS || LWIP_TCPIP_CORE_LOCKING_INPUT
-          dev->chip->unlock(dev->chip);
-#endif
-          input_rtn = dev->netif->input(packet, dev->netif);
-          if (input_rtn != ERR_OK)
-            pbuf_free(packet);
-#if NO_SYS || LWIP_TCPIP_CORE_LOCKING_INPUT
-          dev->chip->lock(dev->chip);
-#endif
-
-          if (input_rtn != ERR_OK)
-            {
-              rtn = EIO;
-              goto out;
-            }
-        }
-    }
+          }
+      }
+  }
 
 out:
   enable_rtn = ch390_enable_irq(dev);
@@ -793,9 +814,11 @@ out:
     rtn = enable_rtn;
   dev->chip->unlock(dev->chip);
 
-  if (link_changed)
+  if (dev->link_change)
     {
       int link_rtn = ch390_notify_link_change(dev);
+      if (!link_rtn)
+        dev->link_change = false;
       if (!rtn)
         rtn = link_rtn;
     }
@@ -877,6 +900,7 @@ ch390_init(ch390_t *dev, struct netif *netif)
     return EINVAL;
 
   ch390_mac_filter_init(&dev->mac_filter);
+  dev->link_change = false;
   netif->hwaddr_len = 6;
   netif->state = dev;
   dev->netif = netif;

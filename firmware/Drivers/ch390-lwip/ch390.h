@@ -234,6 +234,7 @@ typedef struct
   ch390_chip_t *chip;
   ch390_mac_filter_t mac_filter;
   struct netif *netif;
+  bool link_change;
 } ch390_t;
 
 int ch390_init(ch390_t *dev, struct netif *netif);
