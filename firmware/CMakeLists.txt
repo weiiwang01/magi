@@ -37,6 +37,20 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+set(ATCA_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(ATCA_NO_HEAP ON CACHE BOOL "" FORCE)
+set(ATCA_HAL_I2C ON CACHE BOOL "" FORCE)
+set(ATCA_ATECC608_SUPPORT ON CACHE BOOL "" FORCE)
+foreach(device ATSHA204A ATSHA206A ATECC108A ATECC508A ECC204 ECC206 TA010 SHA104 SHA105)
+    set(ATCA_${device}_SUPPORT OFF CACHE BOOL "" FORCE)
+endforeach()
+add_subdirectory(Drivers/cryptoauthlib/lib)
+target_include_directories(cryptoauth PUBLIC
+    ${PROJECT_SOURCE_DIR}/Drivers/cryptoauthlib/lib
+    ${PROJECT_BINARY_DIR}/Drivers/cryptoauthlib/lib
+)
+target_link_libraries(cryptoauth stm32cubemx)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -99,6 +113,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/bitbang_i2c.c
     Core/Src/cdc.c
     Core/Src/cmd.c
+    Core/Src/crypto.c
+    Core/Src/cryptoauth_hal.c
     Core/Src/log.c
     Core/Src/network.c
     Core/Src/switch.c
@@ -108,6 +124,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/usb.c
     Core/Src/usb_hub.c
     Core/Src/ws2812.c
+    Core/Src/xpander.c
     Drivers/ch390-lwip/ch390.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
@@ -137,6 +154,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     lwip
+    cryptoauth
 
     # Add user defined libraries
 )

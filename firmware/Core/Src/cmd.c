@@ -7,6 +7,8 @@
 
 #include "adc.h"
 #include "container_of.h"
+#include "crypto.h"
+#include "cryptoauthlib.h"
 #include "network.h"
 
 #define CMD_LINE_MAX 512
@@ -14,6 +16,99 @@
 
 #define CMD_SYMBOL_GET "get"
 #define CMD_SYMBOL_SET "set"
+
+static const char *
+cmd_crypto_lock_state(uint8_t value)
+{
+  return value == 0 ? "locked" : value == 0x55 ? "unlocked" : "unknown";
+}
+
+static int
+cmd_magi_controller_crypto_status_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  atecc608_config_t config;
+  uint8_t revision[4];
+  uint8_t serial[9];
+
+  crypto_lock();
+  uint8_t address = atcab_get_device_address(atcab_get_device()) >> 1;
+  ATCA_STATUS result = atcab_info(revision);
+  if (result == ATCA_SUCCESS)
+    {
+      result = atcab_read_config_zone((uint8_t *)&config);
+    }
+  ATCA_STATUS sleep_result = atcab_wakeup();
+  if (sleep_result == ATCA_SUCCESS)
+    {
+      sleep_result = atcab_sleep();
+    }
+  crypto_unlock();
+  if (result == ATCA_SUCCESS)
+    {
+      result = sleep_result;
+    }
+  if (result != ATCA_SUCCESS)
+    {
+      return stream_error(
+                 stream_printf(stream,
+                               "ATECC608B status failed: %d (0x%02x)\r\n",
+                               result,
+                               (unsigned int)(uint8_t)result))
+                 ? CMD_EXIT_IOERR
+                 : 1;
+    }
+  memcpy(serial, &config.SN03, 4);
+  memcpy(serial + 4, &config.SN47, 4);
+  serial[8] = config.SN8;
+  if (stream_error(stream_printf(
+          stream,
+          "ATECC608B\r\nI2C address: 0x%02x (7-bit)\r\n"
+          "Revision: %02x%02x%02x%02x\r\n"
+          "Serial number: %02x%02x%02x%02x%02x%02x%02x%02x%02x\r\n"
+          "AES enable: 0x%02x\r\nConfig zone: %s (0x%02x)\r\n"
+          "Data/OTP zone: %s (0x%02x)\r\nSlotLocked: 0x%04x\r\n"
+          "Slot  SlotConfig  KeyConfig  Slot lock\r\n",
+          address,
+          revision[0],
+          revision[1],
+          revision[2],
+          revision[3],
+          serial[0],
+          serial[1],
+          serial[2],
+          serial[3],
+          serial[4],
+          serial[5],
+          serial[6],
+          serial[7],
+          serial[8],
+          config.AES_Enable,
+          cmd_crypto_lock_state(config.LockConfig),
+          config.LockConfig,
+          cmd_crypto_lock_state(config.LockValue),
+          config.LockValue,
+          config.SlotLocked)))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  for (unsigned int slot = 0;
+       slot < sizeof(config.SlotConfig) / sizeof(config.SlotConfig[0]);
+       ++slot)
+    {
+      if (stream_error(stream_printf(stream,
+                                     "%4u  0x%04x      0x%04x     %s\r\n",
+                                     slot,
+                                     config.SlotConfig[slot],
+                                     config.KeyConfig[slot],
+                                     (config.SlotLocked & (1U << slot)) != 0
+                                         ? "unlocked"
+                                         : "locked")))
+        {
+          return CMD_EXIT_IOERR;
+        }
+    }
+  return CMD_EXIT_OK;
+}
 
 static int
 cmd_magi_controller_hostname_encode(cmd_node_t *cmd, stream_t *stream)
@@ -188,9 +283,18 @@ static cmd_node_t cmd_network_ipv4 = {
   .child = &cmd_network_ipv4_address,
   .next = &cmd_network_ipv6,
 };
+static cmd_node_t cmd_magi_controller_crypto_status = {
+  .symbol = "status",
+  .exec = cmd_magi_controller_crypto_status_exec,
+};
+static cmd_node_t cmd_magi_controller_crypto = {
+  .symbol = "crypto",
+  .child = &cmd_magi_controller_crypto_status,
+};
 static cmd_node_t cmd_magi_controller_network = {
   .symbol = "network",
   .child = &cmd_network_ipv4,
+  .next = &cmd_magi_controller_crypto,
 };
 
 static cmd_node_t cmd_magi_controller_echo = {

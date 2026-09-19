@@ -12,7 +12,7 @@
 #include "usbd_cdc.h"
 
 #define CDC_BUFFER_SIZE 64U
-#define CDC_TASK_STACK_SIZE 512U
+#define CDC_TASK_STACK_SIZE 768U
 
 typedef struct
 {
