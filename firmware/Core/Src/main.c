@@ -25,10 +25,17 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "adc.h"
+#include "cdc.h"
 #include "log.h"
+#include "network.h"
+#include "crypto.h"
+#include "console.h"
 #include "switch.h"
+#include "tcpm.h"
+#include "timeout.h"
 #include "unit.h"
 #include "usb_hub.h"
+#include "usbpd_dpm_core.h"
 #include "ws2812.h"
 /* USER CODE END Includes */
 
@@ -54,10 +61,9 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 512 * 4
 };
 /* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -101,7 +107,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  timeout_timer_init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -111,10 +117,10 @@ int main(void)
   MX_UCPD2_Init();
   /* USER CODE BEGIN 2 */
   log_init();
+  console_init();
   adc_init();
   usb_hub_init();
   ws2812_init();
-  ws2812_set_rgb(0U, 16U, 16U, 16U);
   switch_init();
   /* USER CODE END 2 */
 
@@ -145,6 +151,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   unit_init();
+  network_init();
+  crypto_init();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -452,10 +460,46 @@ void StartDefaultTask(void *argument)
   /* init code for USB_Device */
   MX_USB_Device_Init();
   /* USER CODE BEGIN 5 */
+  cdc_init();
+  tcpm_sgmii_status_t last_sgmii_status = {0};
+
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    switch_port_status_t sgmii_status = {0};
+    uint8_t r = 12, g = 0, b = 0;
+
+    tcpm_sgmii_status_t sgmii = tcpm_get_sgmii_status(tcpm, TCPM_PORT_1);
+    if (sgmii.cycles != last_sgmii_status.cycles
+        || (!sgmii.active && last_sgmii_status.active))
+    {
+      if (0 == switch_disable_sgmii())
+      {
+        last_sgmii_status.cycles = sgmii.cycles;
+        last_sgmii_status.active = false;
+      }
+    }
+    else if (sgmii.active && !last_sgmii_status.active)
+    {
+      if (0 == switch_enable_sgmii(SWITCH_PROTOCOL_HSGMII,
+                                   SWITCH_SPEED_2500M,
+                                   SWITCH_DUPLEX_FULL))
+      {
+        last_sgmii_status.active = true;
+      }
+    }
+
+    if (last_sgmii_status.active
+        && (0 == switch_get_port_status(SWITCH_EXT_PORT0, &sgmii_status))
+        && sgmii_status.link)
+    {
+      b = 8;
+    }
+    if (adc_get_usb_voltage(USB0) > 19000 || adc_get_usb_voltage(USB1) > 19000) {
+      g = 8;
+    }
+    ws2812_set_rgb(0, r,g,b);
+    timeout_sleep_ms(100);
   }
   /* USER CODE END 5 */
 }
@@ -478,7 +522,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-
+  if (htim->Instance == TIM17)
+  {
+    USBPD_DPM_TimerCounter();
+  }
   /* USER CODE END Callback 1 */
 }
 

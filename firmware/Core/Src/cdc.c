@@ -9,6 +9,7 @@
 #include "cmd.h"
 #include "fifo.h"
 #include "stream.h"
+#include "stream_notify.h"
 #include "usbd_cdc.h"
 
 #define CDC_BUFFER_SIZE 64U
@@ -18,6 +19,7 @@ typedef struct
 {
   TaskHandle_t task;
   stream_t stream;
+  stream_notify_t notify;
   USBD_HandleTypeDef *device;
   uint8_t tx_buffer[CDC_BUFFER_SIZE];
   fifo_t tx_fifo;
@@ -33,30 +35,16 @@ static stream_status_t cdc_shell_exchange(stream_t *stream,
                                           uint8_t *read,
                                           uint8_t *write,
                                           stream_opts_t *opts);
+static void cdc_shell_notify(stream_t *stream, uint32_t read, uint32_t write);
 
 static cdc_shell_t cdc_shell = {
-  .stream = { .exchange = cdc_shell_exchange },
+  .stream = { .exchange = cdc_shell_exchange, .notify = cdc_shell_notify },
 };
 
 static void
-cdc_notify()
+cdc_notify(bool read, bool write)
 {
-  TaskHandle_t task = cdc_shell.task;
-  if (task == NULL)
-    {
-      return;
-    }
-
-  if (__get_IPSR() != 0U)
-    {
-      BaseType_t task_woken = pdFALSE;
-      vTaskNotifyGiveFromISR(task, &task_woken);
-      portYIELD_FROM_ISR(task_woken);
-    }
-  else
-    {
-      xTaskNotifyGive(task);
-    }
+  stream_notify_send(&cdc_shell.notify, read, write);
 }
 
 static bool
@@ -104,7 +92,7 @@ cdc_usb_init(USBD_HandleTypeDef *device)
   cdc_shell.rx_count = 0;
   USBD_CDC_SetTxBuffer(device, cdc_shell.tx_buffer, 0);
   USBD_CDC_SetRxBuffer(device, cdc_shell.rx_buffer);
-  cdc_notify();
+  cdc_notify(true, true);
   return USBD_OK;
 }
 
@@ -115,7 +103,7 @@ cdc_usb_deinit()
   fifo_init(
       &cdc_shell.tx_fifo, cdc_shell.tx_buffer, sizeof(cdc_shell.tx_buffer));
   cdc_shell.rx_count = 0;
-  cdc_notify();
+  cdc_notify(true, true);
 }
 
 void
@@ -129,7 +117,7 @@ cdc_usb_receive(uint8_t *data, uint32_t length)
     }
   else
     {
-      cdc_notify();
+      cdc_notify(true, false);
     }
 }
 
@@ -138,7 +126,7 @@ cdc_usb_transmit_complete(uint32_t length)
 {
   fifo_dma_read_done(&cdc_shell.tx_fifo, length);
   cdc_flush();
-  cdc_notify();
+  cdc_notify(false, true);
 }
 
 static uint8_t
@@ -199,10 +187,15 @@ cdc_shell_exchange(stream_t *stream,
 
   for (;;)
     {
+      taskENTER_CRITICAL();
       stream_status_t status = 0;
+      if (!cdc_ready() && opts && opts->nonblocking)
+        {
+          taskEXIT_CRITICAL();
+          return STREAM_CLOSED;
+        }
       if (read)
         {
-          taskENTER_CRITICAL();
           if (cdc_shell.rx_count != 0)
             {
               *read = cdc_shell.rx_buffer[cdc_shell.rx_offset++];
@@ -213,7 +206,6 @@ cdc_shell_exchange(stream_t *stream,
                 }
               status |= STREAM_READ_OK;
             }
-          taskEXIT_CRITICAL();
         }
 
       if (write && cdc_transmit(write, 1) == USBD_OK)
@@ -223,9 +215,27 @@ cdc_shell_exchange(stream_t *stream,
 
       if (status != 0 || (opts != NULL && opts->nonblocking))
         {
+          taskEXIT_CRITICAL();
           return status;
         }
-
-      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+      cdc_shell.notify.waiter = xTaskGetCurrentTaskHandle();
+      taskEXIT_CRITICAL();
+      xTaskNotifyWait(0, UINT32_MAX, NULL, portMAX_DELAY);
+      taskENTER_CRITICAL();
+      cdc_shell.notify.waiter = NULL;
+      taskEXIT_CRITICAL();
     }
+}
+
+static void
+cdc_shell_notify(stream_t *stream, uint32_t read, uint32_t write)
+{
+  taskENTER_CRITICAL();
+  stream_notify_set(&cdc_shell.notify, read, write);
+  bool closed = !cdc_ready();
+  cdc_notify(closed || cdc_shell.rx_count != 0,
+             closed
+                 || fifo_size(&cdc_shell.tx_fifo)
+                        < fifo_capacity(&cdc_shell.tx_fifo));
+  taskEXIT_CRITICAL();
 }

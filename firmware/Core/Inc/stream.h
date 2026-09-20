@@ -28,7 +28,7 @@ typedef struct
   bool nonblocking;
 } stream_opts_t;
 
-static inline void
+static void
 stream_opts_init(stream_opts_t *opts)
 {
   *opts = (stream_opts_t){ .nonblocking = false };
@@ -40,6 +40,7 @@ struct stream_t
                               uint8_t *read,
                               uint8_t *write,
                               stream_opts_t *opts);
+  void (*notify)(stream_t *stream, uint32_t read, uint32_t write);
 };
 
 typedef struct

@@ -1,5 +1,7 @@
 #include "crypto.h"
 
+#include <stdbool.h>
+
 #include "cryptoauthlib.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -7,6 +9,7 @@
 #include "xpander.h"
 
 static SemaphoreHandle_t crypto_mutex;
+static bool crypto_ready;
 static ATCAIfaceCfg crypto_config = {
   .iface_type = ATCA_I2C_IFACE,
   .devtype = ATECC608,
@@ -24,19 +27,26 @@ crypto_init()
     {
       Error_Handler();
     }
-  if (atcab_init(&crypto_config) != ATCA_SUCCESS)
-    {
-      Error_Handler();
-    }
 }
 
-void
+int
 crypto_lock()
 {
   if (xSemaphoreTake(crypto_mutex, portMAX_DELAY) != pdTRUE)
     {
       Error_Handler();
     }
+  if (!crypto_ready)
+    {
+      ATCA_STATUS status = atcab_init(&crypto_config);
+      if (status != ATCA_SUCCESS)
+        {
+          crypto_unlock();
+          return status;
+        }
+      crypto_ready = true;
+    }
+  return ATCA_SUCCESS;
 }
 
 void

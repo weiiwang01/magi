@@ -2,7 +2,7 @@
 #define MAGI_CRYPTO_H
 
 void crypto_init();
-void crypto_lock();
+int crypto_lock();
 void crypto_unlock();
 
 #endif

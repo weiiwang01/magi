@@ -7,6 +7,7 @@
 
 #include "adc.h"
 #include "container_of.h"
+#include "console.h"
 #include "crypto.h"
 #include "cryptoauthlib.h"
 #include "network.h"
@@ -16,6 +17,149 @@
 
 #define CMD_SYMBOL_GET "get"
 #define CMD_SYMBOL_SET "set"
+
+static int
+cmd_console_exec(console_t *console, unsigned int unit, stream_t *stream)
+{
+  console_tap_t tap;
+  console_tap_init(&tap);
+  if (!console_is_enabled(console) || console_tap_attach(&tap, console) != 0)
+    {
+      return CMD_EXIT_IOERR;
+    }
+  stream_status_t greeting
+      = stream_printf(stream,
+                      "Attached to unit %u console, press ctrl-b + q to exit "
+                      "and ctrl-b + ctrl-b to send ctrl-b.\r\n",
+                      unit);
+  if (stream_error(greeting))
+    {
+      console_tap_detach(&tap);
+      return greeting & STREAM_ABORT ? CMD_EXIT_INTERRUPT : CMD_EXIT_IOERR;
+    }
+  stream_t *serial = &tap.stream;
+  stream_opts_t opts = { .nonblocking = true };
+  uint8_t to_console = 0, to_command = 0;
+  bool command_to_serial = false, serial_to_command = false, escape = false;
+  int exit_code = CMD_EXIT_OK;
+  const uint32_t command_read = 1U << 0, command_write = 1U << 1;
+  const uint32_t console_read = 1U << 2, console_write = 1U << 3;
+  uint32_t command_notifications = UINT32_MAX,
+           console_notifications = UINT32_MAX;
+
+  for (;;)
+    {
+      uint32_t command_interest = (!command_to_serial ? command_read : 0)
+                                  | (serial_to_command ? command_write : 0);
+      uint32_t console_interest = (!serial_to_command ? console_read : 0)
+                                  | (command_to_serial ? console_write : 0);
+      if (command_interest != command_notifications)
+        {
+          stream->notify(stream,
+                         command_interest & command_read,
+                         command_interest & command_write);
+          command_notifications = command_interest;
+        }
+      if (console_interest != console_notifications)
+        {
+          serial->notify(serial,
+                         console_interest & console_read,
+                         console_interest & console_write);
+          console_notifications = console_interest;
+        }
+      uint8_t input = 0;
+      stream_status_t result
+          = stream->exchange(stream,
+                             !command_to_serial ? &input : NULL,
+                             serial_to_command ? &to_command : NULL,
+                             &opts);
+      bool progress = (result & (STREAM_READ_OK | STREAM_WRITE_OK)) != 0;
+      if (stream_error(result))
+        {
+          exit_code
+              = result & STREAM_ABORT ? CMD_EXIT_INTERRUPT : CMD_EXIT_IOERR;
+          break;
+        }
+      if (result & STREAM_WRITE_OK)
+        {
+          serial_to_command = false;
+        }
+      if (result & STREAM_READ_OK)
+        {
+          if (escape)
+            {
+              escape = false;
+              if (input == 'q')
+                {
+                  break;
+                }
+              if (input == 0x02)
+                {
+                  to_console = input;
+                  command_to_serial = true;
+                }
+            }
+          else if (input == 0x02)
+            {
+              escape = true;
+            }
+          else
+            {
+              to_console = input;
+              command_to_serial = true;
+            }
+        }
+      result = serial->exchange(serial,
+                                !serial_to_command ? &to_command : NULL,
+                                command_to_serial ? &to_console : NULL,
+                                &opts);
+      if (stream_error(result))
+        {
+          exit_code
+              = result & STREAM_ABORT ? CMD_EXIT_INTERRUPT : CMD_EXIT_IOERR;
+          break;
+        }
+      if (result & STREAM_READ_OK)
+        {
+          serial_to_command = true;
+        }
+      if (result & STREAM_WRITE_OK)
+        {
+          command_to_serial = false;
+        }
+      progress |= (result & (STREAM_READ_OK | STREAM_WRITE_OK)) != 0;
+      if (!progress)
+        {
+          xTaskNotifyWait(0,
+                          command_read | command_write | console_read
+                              | console_write,
+                          NULL,
+                          portMAX_DELAY);
+        }
+    }
+  stream->notify(stream, 0, 0);
+  serial->notify(serial, 0, 0);
+  console_tap_detach(&tap);
+  return exit_code;
+}
+
+static int
+cmd_unit1_console_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_console_exec(console_unit_1, 1, stream);
+}
+
+static int
+cmd_unit2_console_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_console_exec(console_unit_2, 2, stream);
+}
+
+static int
+cmd_unit3_console_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_console_exec(console_unit_3, 3, stream);
+}
 
 static const char *
 cmd_crypto_lock_state(uint8_t value)
@@ -30,9 +174,19 @@ cmd_magi_controller_crypto_status_exec(cmd_node_t *cmd, stream_t *stream)
   uint8_t revision[4];
   uint8_t serial[9];
 
-  crypto_lock();
+  ATCA_STATUS result = crypto_lock();
+  if (result != ATCA_SUCCESS)
+    {
+      return stream_error(
+                 stream_printf(stream,
+                               "Crypto module unavailable: %d (0x%02x)\r\n",
+                               result,
+                               (unsigned int)(uint8_t)result))
+                 ? CMD_EXIT_IOERR
+                 : 1;
+    }
   uint8_t address = atcab_get_device_address(atcab_get_device()) >> 1;
-  ATCA_STATUS result = atcab_info(revision);
+  result = atcab_info(revision);
   if (result == ATCA_SUCCESS)
     {
       result = atcab_read_config_zone((uint8_t *)&config);
@@ -316,9 +470,23 @@ static cmd_node_t cmd_magi_controller_temperature = {
   .next = &cmd_magi_controller_hostname,
 };
 
+static cmd_node_t cmd_unit3_console
+    = { .symbol = "console", .exec = cmd_unit3_console_exec };
+static cmd_node_t cmd_unit2_console
+    = { .symbol = "console", .exec = cmd_unit2_console_exec };
+static cmd_node_t cmd_unit1_console
+    = { .symbol = "console", .exec = cmd_unit1_console_exec };
+static cmd_node_t cmd_unit3 = { .symbol = "3", .child = &cmd_unit3_console };
+static cmd_node_t cmd_unit2
+    = { .symbol = "2", .child = &cmd_unit2_console, .next = &cmd_unit3 };
+static cmd_node_t cmd_unit1
+    = { .symbol = "1", .child = &cmd_unit1_console, .next = &cmd_unit2 };
+static cmd_node_t cmd_magi_unit = { .symbol = "unit", .child = &cmd_unit1 };
+
 static cmd_node_t cmd_magi_controller = {
   .symbol = "controller",
   .child = &cmd_magi_controller_temperature,
+  .next = &cmd_magi_unit,
 };
 
 static cmd_node_t cmd_root_instance = {
@@ -488,6 +656,36 @@ cmd_exec_stream_exchange(stream_t *stream,
 }
 
 static void
+cmd_line_stream_notify(stream_t *stream, uint32_t read, uint32_t write)
+{
+  cmd_line_t *line = container_of(stream, cmd_line_t, stream);
+  line->io->notify(line->io, 0, write);
+  if (read)
+    {
+      xTaskNotify(xTaskGetCurrentTaskHandle(), read, eSetBits);
+    }
+}
+
+static void
+cmd_exec_stream_notify(stream_t *stream, uint32_t read, uint32_t write)
+{
+  cmd_exec_stream_t *exec_stream
+      = container_of(stream, cmd_exec_stream_t, stream);
+  exec_stream->exec->io->notify(exec_stream->exec->io, read, write);
+}
+
+static void
+cmd_argument_stream_notify(stream_t *stream, uint32_t read, uint32_t write)
+{
+  cmd_argument_t *argument = container_of(stream, cmd_argument_t, stream);
+  argument->io->notify(argument->io, argument->status ? 0 : read, write);
+  if (read && argument->status)
+    {
+      xTaskNotify(xTaskGetCurrentTaskHandle(), read, eSetBits);
+    }
+}
+
+static void
 cmd_line_init(cmd_line_t *line, stream_t *stream)
 {
   line->io = stream;
@@ -495,6 +693,7 @@ cmd_line_init(cmd_line_t *line, stream_t *stream)
   line->new_line = 0;
   line->read_count = 0;
   line->stream.exchange = cmd_line_stream_exchange;
+  line->stream.notify = cmd_line_stream_notify;
 }
 
 static void
@@ -700,6 +899,7 @@ cmd_argument_init(cmd_argument_t *argument, stream_t *stream, cmd_exec_t *exec)
   argument->state = CMD_ARGUMENT_PREFIX;
   argument->status = 0;
   argument->stream.exchange = cmd_argument_stream_exchange;
+  argument->stream.notify = cmd_argument_stream_notify;
 }
 
 static bool
@@ -1038,7 +1238,8 @@ cmd_sm_exec(cmd_exec_t *exec)
     }
   cmd_exec_stream_t exec_stream = {
     .exec = exec,
-    .stream = { .exchange = cmd_exec_stream_exchange },
+    .stream = { .exchange = cmd_exec_stream_exchange,
+                .notify = cmd_exec_stream_notify },
   };
   exec->exit_code = exec->cmd->exec(exec->cmd, &exec_stream.stream);
   exec->state = CMD_STATE_DONE;
