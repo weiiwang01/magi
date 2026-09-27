@@ -1,13 +1,26 @@
 (version 1)
 
-(rule rj45_edge_clearance
-    (constraint edge_clearance (min 0.29mm))
-    (condition "A.memberOfFootprint('Magi:RJ45-TH_MJ88B-B011-RVL11-P')")
+(rule edge
+	(condition "A.memberOf('edgepads')")
+	(constraint edge_clearance (min 0.1mm))
+    (constraint annular_width (min 0.0mm))
 )
 
-(rule solder_jumper
+(rule testpoint_courtyard_ignore
     (severity exclusion)
     (constraint courtyard_clearance)
-    (condition "A.Reference == 'JP*' && B.Reference == 'J*'")
+    (condition "A.Reference == 'TP*' && B.Reference == 'J*'")
 )
 
+(rule mountinghole_clearance_ignore
+    (severity exclusion)
+    (constraint hole_clearance)
+    (constraint bridged_mask)
+    (condition "A.Reference == 'H*' || A.Reference == 'Module*' || A.Reference == 'J*'")
+)
+
+(rule mountinghole_courtyard_ignore
+    (severity exclusion)
+    (constraint courtyard_clearance)
+    (condition "A.Reference == 'Module*' && B.Reference == 'J*'")
+)

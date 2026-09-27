@@ -14,6 +14,8 @@ _autosave-*
 *-save.kicad_pcb
 *.lck
 fp-info-cache
+.history
+.history_trim
 
 # Netlist files (exported from Eeschema)
 *.net
@@ -28,3 +30,6 @@ fp-info-cache
 
 # Production files
 production/**
+
+# Vender models
+Magi.3dshapes/vendor/**
