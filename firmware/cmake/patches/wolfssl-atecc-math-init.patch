@@ -1,0 +1,53 @@
+--- a/wolfcrypt/src/ecc.c
++++ b/wolfcrypt/src/ecc.c
+@@ -6275,8 +6275,7 @@
+ #if defined(WOLFSSL_ATECC508A) || defined(WOLFSSL_ATECC608A) || \
+     defined(WOLFSSL_MICROCHIP_TA100)
+     key->slot = ATECC_INVALID_SLOT;
+-#ifdef WOLFSSL_MICROCHIP_TA100
+-    /* TA100 needs pubkey initialized to populate after genkey. With
++    /* Hardware ports need pubkey initialized to populate after genkey. With
+      * ALT_ECC_SIZE the x/y/z pointers must first be aimed at the inline
+      * xyz[] storage; mp_init_multi otherwise dereferences NULL. */
+ #ifdef ALT_ECC_SIZE
+@@ -6293,7 +6292,6 @@
+         return MEMORY_E;
+     }
+ #endif
+-#endif
+ #else
+ #if defined(WOLFSSL_KCAPI_ECC)
+     key->handle = NULL;
+@@ -10964,12 +10962,3 @@
+-#if defined(WOLFSSL_ATECC508A) || defined(WOLFSSL_ATECC608A) || \
+-    defined(WOLFSSL_MICROCHIP_TA100)
+-    /* For SECP256R1 only save raw public key for hardware */
+-    if (curve_id == ECC_SECP256R1 && inLen <= (word32)sizeof(key->pubkey_raw)) {
+-    #ifdef HAVE_COMP_KEY
+-        if (!compressed)
+-    #endif
+-            XMEMCPY(key->pubkey_raw, (byte*)in, inLen);
+-    }
+-#elif defined(WOLFSSL_KCAPI_ECC)
++#if defined(WOLFSSL_KCAPI_ECC)
+     if (inLen <= (word32)sizeof(key->pubkey_raw))
+         XMEMCPY(key->pubkey_raw, (byte*)in, inLen);
+@@ -10992,6 +10981,18 @@
+         key->type = ECC_PUBLICKEY;
+     }
+ 
++#if defined(WOLFSSL_ATECC508A) || defined(WOLFSSL_ATECC608A) || \
++    defined(WOLFSSL_MICROCHIP_TA100)
++    /* The non-extended import API resolves its default curve above. */
++    if (err == MP_OKAY && key->dp->id == ECC_SECP256R1 &&
++        inLen <= (word32)sizeof(key->pubkey_raw)) {
++    #ifdef HAVE_COMP_KEY
++        if (!compressed)
++    #endif
++            XMEMCPY(key->pubkey_raw, in, inLen);
++    }
++#endif
++
+     /* read data */
+     if (err == MP_OKAY)
+         err = mp_read_unsigned_bin(key->pubkey.x, in, (word32)keysize);

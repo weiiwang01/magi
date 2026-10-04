@@ -11,6 +11,7 @@
 #include "crypto.h"
 #include "cryptoauthlib.h"
 #include "network.h"
+#include "ssh_server.h"
 
 #define CMD_LINE_MAX 512
 #define CMD_SYMBOL_MAX 32
@@ -437,6 +438,99 @@ static cmd_node_t cmd_network_ipv4 = {
   .child = &cmd_network_ipv4_address,
   .next = &cmd_network_ipv6,
 };
+static int
+cmd_ssh_key_encode(stream_t *stream, bool host)
+{
+  char key[SSH_KEY_BASE64_SIZE];
+  int error = host ? ssh_get_host_key(key) : ssh_get_authorized_key(key);
+  if (error != 0)
+    {
+      stream_puts(stream,
+                  error == ENOENT ? "No authorized key configured\r\n"
+                                  : "SSH key unavailable: check crypto status "
+                                    "and slot provisioning\r\n");
+      return CMD_EXIT_IOERR;
+    }
+  return stream_error(stream_printf(stream, "ecdsa-sha2-nistp256 %s\r\n", key))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_ssh_host_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_ssh_key_encode(stream, true);
+}
+
+static int
+cmd_ssh_authorized_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return cmd_ssh_key_encode(stream, false);
+}
+
+static int
+cmd_ssh_authorized_decode(cmd_node_t *cmd, stream_t *stream)
+{
+  char input[CMD_LINE_MAX + 1];
+  uint32_t length = 0;
+  stream_status_t result
+      = stream_gets(stream, (uint8_t *)input, sizeof(input) - 1, &length);
+  if (result & STREAM_ABORT)
+    {
+      return CMD_EXIT_INTERRUPT;
+    }
+  if (stream_error(result & ~STREAM_END))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  input[length] = '\0';
+  char *key = input;
+  size_t key_length = strcspn(input, " \t");
+  int error = EINVAL;
+  if ((result & STREAM_END) && memchr(input, '\0', length) == NULL)
+    {
+      if (length == 0)
+        {
+          error = ssh_clear_authorized_key();
+        }
+      else if (key_length < length)
+        {
+          input[key_length] = '\0';
+          if (strcmp(input, "ecdsa-sha2-nistp256") == 0)
+            {
+              key += key_length + 1;
+              key += strspn(key, " \t");
+              key_length = strcspn(key, " \t");
+              error = ssh_set_authorized_key(key, key_length);
+            }
+        }
+    }
+  if (error != 0)
+    {
+      stream_puts(
+          stream,
+          error == EINVAL
+              ? "Expected a full ECDSA P-256 public key or an empty string\r\n"
+              : "Authorized key write failed: check slot 10 provisioning\r\n");
+      return error == EINVAL ? CMD_EXIT_MISUSE : CMD_EXIT_IOERR;
+    }
+  return CMD_EXIT_OK;
+}
+
+static cmd_node_t cmd_ssh_host = {
+  .symbol = "host-key",
+  .encode = cmd_ssh_host_encode,
+};
+static cmd_node_t cmd_ssh_authorized = {
+  .symbol = "authorized-key",
+  .encode = cmd_ssh_authorized_encode,
+  .decode = cmd_ssh_authorized_decode,
+  .next = &cmd_ssh_host,
+};
+static cmd_node_t cmd_magi_controller_ssh = {
+  .symbol = "ssh",
+  .child = &cmd_ssh_authorized,
+};
 static cmd_node_t cmd_magi_controller_crypto_status = {
   .symbol = "status",
   .exec = cmd_magi_controller_crypto_status_exec,
@@ -444,6 +538,7 @@ static cmd_node_t cmd_magi_controller_crypto_status = {
 static cmd_node_t cmd_magi_controller_crypto = {
   .symbol = "crypto",
   .child = &cmd_magi_controller_crypto_status,
+  .next = &cmd_magi_controller_ssh,
 };
 static cmd_node_t cmd_magi_controller_network = {
   .symbol = "network",
@@ -524,6 +619,7 @@ typedef enum
   CMD_ERROR_INCORRECT_NUMBER_ARGUMENTS,
   CMD_ERROR_UNKNOWN_COMMAND,
   CMD_ERROR_SYMBOL_TOO_LONG,
+  CMD_ERROR_UNTERMINATED_QUOTE,
 } cmd_error_t;
 
 typedef enum
@@ -548,6 +644,7 @@ typedef enum
 {
   CMD_ARGUMENT_PREFIX = 0,
   CMD_ARGUMENT_VALUE,
+  CMD_ARGUMENT_QUOTED,
   CMD_ARGUMENT_SUFFIX,
 } cmd_argument_state_t;
 
@@ -851,6 +948,19 @@ cmd_argument_stream_exchange(stream_t *stream,
       uint8_t c = 0;
       stream_status_t result
           = argument->io->exchange(argument->io, &c, write, opts);
+      if (((result & STREAM_END) && argument->state == CMD_ARGUMENT_PREFIX)
+          || (argument->state == CMD_ARGUMENT_QUOTED
+              && ((result & STREAM_END)
+                  || ((result & STREAM_READ_OK) && (c == '\r' || c == '\n')))))
+        {
+          argument->exec->end = (result & STREAM_END) != 0;
+          argument->exec->state = CMD_STATE_ERROR;
+          argument->exec->error = argument->state == CMD_ARGUMENT_QUOTED
+                                      ? CMD_ERROR_UNTERMINATED_QUOTE
+                                      : CMD_ERROR_INCORRECT_NUMBER_ARGUMENTS;
+          argument->status = STREAM_ABORT;
+          return (result & STREAM_WRITE_OK) | STREAM_ABORT;
+        }
       if (stream_error(result))
         {
           argument->status = result & ~(STREAM_READ_OK | STREAM_WRITE_OK);
@@ -864,7 +974,20 @@ cmd_argument_stream_exchange(stream_t *stream,
         {
           return result;
         }
-      if (cmd_is_whitespace(c))
+      if (argument->state == CMD_ARGUMENT_QUOTED)
+        {
+          if (c != '"')
+            {
+              *read = c;
+              return result;
+            }
+          argument->state = CMD_ARGUMENT_SUFFIX;
+        }
+      else if (argument->state == CMD_ARGUMENT_PREFIX && c == '"')
+        {
+          argument->state = CMD_ARGUMENT_QUOTED;
+        }
+      else if (cmd_is_whitespace(c))
         {
           if (argument->state == CMD_ARGUMENT_VALUE)
             {
@@ -1033,6 +1156,10 @@ cmd_sm_error(cmd_exec_t *exec)
     }
   switch (exec->error)
     {
+    case CMD_ERROR_UNTERMINATED_QUOTE:
+      exec->exit_code = CMD_EXIT_MISUSE;
+      stream_puts(stream, "unterminated quoted argument\r\n");
+      break;
     case CMD_ERROR_SYMBOL_TOO_LONG:
       exec->exit_code = CMD_EXIT_NOT_FOUND;
       stream_puts(stream, "parsing error: symbol too long\r\n");
@@ -1284,6 +1411,39 @@ cmd_exec(stream_t *io, cmd_line_t *line)
     }
 }
 
+int
+cmd_execute(stream_t *stream, const char *command)
+{
+  size_t length = strlen(command);
+  if (length == 0 || length > CMD_LINE_MAX || strchr(command, '\r') != NULL
+      || strchr(command, '\n') != NULL)
+    {
+      return CMD_EXIT_MISUSE;
+    }
+  cmd_line_t line;
+  cmd_line_init(&line, stream);
+  memcpy(line.line, command, length);
+  line.write_count = length;
+  return cmd_exec(stream, &line);
+}
+
+static bool
+cmd_line_is_exit(const cmd_line_t *line)
+{
+  uint32_t start = 0, end = line->write_count;
+  while (start < end
+         && (line->line[start] == ' ' || line->line[start] == '\t'))
+    {
+      ++start;
+    }
+  while (end > start
+         && (line->line[end - 1] == ' ' || line->line[end - 1] == '\t'))
+    {
+      --end;
+    }
+  return end - start == 4 && memcmp(line->line + start, "exit", 4) == 0;
+}
+
 void
 cmd_shell(stream_t *stream)
 {
@@ -1303,6 +1463,10 @@ cmd_shell(stream_t *stream)
       switch (cmd_line_readline(&line))
         {
         case CMD_LINE_OK:
+          if (cmd_line_is_exit(&line))
+            {
+              return;
+            }
           cmd_exec(stream, &line);
           break;
         case CMD_LINE_ABORT:

@@ -156,7 +156,10 @@ cdc_transmit(const uint8_t *data, uint16_t length)
 static void
 cdc_shell_task(void *argument)
 {
-  cmd_shell(&cdc_shell.stream);
+  while (true)
+    {
+      cmd_shell(&cdc_shell.stream);
+    }
 }
 
 void

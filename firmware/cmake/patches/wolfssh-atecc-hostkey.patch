@@ -1,0 +1,47 @@
+--- internal.c
++++ internal.c
+@@ -1498,4 +1498,9 @@
+-                if (isPrivate) {
+-                    ret = wc_EccPrivateKeyDecode(in, &idx,
+-                            &key->ks.ecc.key, inSz);
+-                }
++                if (isPrivate) {
++#ifdef WOLFSSH_ATECC_HOSTKEY
++                    ret = wc_EccPublicKeyDecode(in, &idx,
++                            &key->ks.ecc.key, inSz);
++#else
++                    ret = wc_EccPrivateKeyDecode(in, &idx,
++                            &key->ks.ecc.key, inSz);
++#endif
++                }
+@@ -9130,8 +9130,10 @@
+ 
+     if (ret == WS_SUCCESS) {
+         channel->eofRxd = 1;
++#ifndef WOLFSSH_NO_AUTO_CHANNEL_EOF
+         if (!channel->eofTxd) {
+             ret = SendChannelEof(ssh, channel->peerChannel);
+         }
++#endif
+         ssh->lastRxId = channelId;
+     }
+@@ -11552,4 +11552,15 @@
+-            if (ret == 0)
+-                ret = wc_EccPrivateKeyDecode(ssh->ctx->privateKey[keyIdx].key,
+-                        &scratch, &sigKeyBlock_ptr->sk.ecc.key,
+-                        ssh->ctx->privateKey[keyIdx].keySz);
++            if (ret == 0) {
++#ifdef WOLFSSH_ATECC_HOSTKEY
++                ret = wc_EccPublicKeyDecode(ssh->ctx->privateKey[keyIdx].key,
++                        &scratch, &sigKeyBlock_ptr->sk.ecc.key,
++                        ssh->ctx->privateKey[keyIdx].keySz);
++                if (ret == 0) {
++                    sigKeyBlock_ptr->sk.ecc.key.slot = ATECC_SLOT_AUTH_PRIV;
++                    sigKeyBlock_ptr->sk.ecc.key.type = ECC_PRIVATEKEY;
++                }
++#else
++                ret = wc_EccPrivateKeyDecode(ssh->ctx->privateKey[keyIdx].key,
++                        &scratch, &sigKeyBlock_ptr->sk.ecc.key,
++                        ssh->ctx->privateKey[keyIdx].keySz);
++#endif
++            }

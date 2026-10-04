@@ -107,6 +107,57 @@ target_include_directories(lwip PUBLIC
 )
 target_link_libraries(lwip PUBLIC stm32cubemx)
 
+set(WOLFSSL_DIR ${PROJECT_SOURCE_DIR}/Middlewares/Third_Party/wolfSSL)
+set(WOLFSSH_DIR ${PROJECT_SOURCE_DIR}/Middlewares/Third_Party/wolfSSH)
+
+find_program(MAGI_PATCH patch REQUIRED)
+function(magi_patch_source output source patch_file)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${source}" "${patch_file}")
+    configure_file("${source}" "${output}" COPYONLY)
+    execute_process(COMMAND "${MAGI_PATCH}" --batch --silent "${output}" "${patch_file}"
+        RESULT_VARIABLE result ERROR_VARIABLE error)
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "Cannot apply ${patch_file}: ${error}")
+    endif()
+endfunction()
+
+set(MAGI_ATMEL_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/ports/atmel.c)
+set(MAGI_ECC_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/ports/ecc.c)
+set(MAGI_WOLFSSH_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/ports/internal.c)
+magi_patch_source("${MAGI_ATMEL_SOURCE}"
+    "${WOLFSSL_DIR}/wolfcrypt/src/port/atmel/atmel.c"
+    "${PROJECT_SOURCE_DIR}/cmake/patches/wolfssl-atecc-tempkey.patch")
+magi_patch_source("${MAGI_ECC_SOURCE}"
+    "${WOLFSSL_DIR}/wolfcrypt/src/ecc.c"
+    "${PROJECT_SOURCE_DIR}/cmake/patches/wolfssl-atecc-math-init.patch")
+magi_patch_source("${MAGI_WOLFSSH_SOURCE}"
+    "${WOLFSSH_DIR}/src/internal.c"
+    "${PROJECT_SOURCE_DIR}/cmake/patches/wolfssh-atecc-hostkey.patch")
+
+set(WOLFSSL_USER_SETTINGS ON)
+set(WOLFSSL_CRYPT_ONLY ON)
+set(WOLFSSL_INLINE ON)
+set(WOLFSSL_CRYPTOAUTHLIB ON)
+include(${WOLFSSL_DIR}/cmake/functions.cmake)
+generate_build_flags()
+generate_lib_src_list("")
+list(REMOVE_ITEM LIB_SOURCES wolfcrypt/src/ecc.c wolfcrypt/src/port/atmel/atmel.c)
+list(TRANSFORM LIB_SOURCES PREPEND "${WOLFSSL_DIR}/")
+add_library(wolfssl STATIC ${LIB_SOURCES} ${MAGI_ATMEL_SOURCE} ${MAGI_ECC_SOURCE})
+target_include_directories(wolfssl PUBLIC ${WOLFSSL_DIR} ${PROJECT_SOURCE_DIR}/Core/Inc)
+target_compile_definitions(wolfssl PUBLIC WOLFSSL_USER_SETTINGS)
+target_link_libraries(wolfssl PUBLIC stm32cubemx cryptoauth)
+
+add_library(wolfssh STATIC
+    ${WOLFSSH_DIR}/src/ssh.c
+    ${MAGI_WOLFSSH_SOURCE}
+    ${WOLFSSH_DIR}/src/io.c
+    ${WOLFSSH_DIR}/src/log.c
+    ${WOLFSSH_DIR}/src/port.c
+)
+target_include_directories(wolfssh PUBLIC ${WOLFSSH_DIR})
+target_link_libraries(wolfssh PUBLIC wolfssl)
+
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/adc.c
@@ -118,6 +169,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/cryptoauth_hal.c
     Core/Src/log.c
     Core/Src/network.c
+    Core/Src/ssh_crypto.c
+    Core/Src/ssh_server.c
     Core/Src/switch.c
     Core/Src/tcpm.c
     Core/Src/tiny_printf.c
@@ -156,6 +209,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     lwip
     cryptoauth
+    wolfssh
 
     # Add user defined libraries
 )

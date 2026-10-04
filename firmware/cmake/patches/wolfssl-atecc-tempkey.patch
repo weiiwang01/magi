@@ -1,0 +1,14 @@
+--- atmel.c
++++ atmel.c
+@@ -648,3 +648,8 @@
+-#else
+-    ret = atcab_ecdh(MAP_TO_HANDLE(slotId), peerKey, pms);
+-#endif
++#else
++#ifdef WOLFSSL_ATECC608A
++    if (slotId == ATCA_TEMPKEY_KEYID)
++        ret = atcab_ecdh_tempkey(peerKey, pms);
++    else
++#endif
++        ret = atcab_ecdh(MAP_TO_HANDLE(slotId), peerKey, pms);
++#endif

@@ -39,7 +39,7 @@
 #define BYTE_ORDER LITTLE_ENDIAN
 #endif
 
-#define LWIP_PROVIDE_ERRNO
+#define LWIP_ERRNO_STDINCLUDE 1
 
 #if defined (__GNUC__) && !(defined (__CC_ARM) || defined (__ARMCC_VERSION))
 

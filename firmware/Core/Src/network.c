@@ -11,6 +11,7 @@
 #include "task.h"
 #include "timeout.h"
 #include "log.h"
+#include "ssh_server.h"
 #include "lwip/apps/mdns.h"
 #include "lwip/dhcp.h"
 #include "lwip/tcpip.h"
@@ -439,6 +440,8 @@ network_task(void *argument)
 
   __HAL_GPIO_EXTI_CLEAR_RISING_IT(BOARD_CH390_INTERRUPT_GPIO_PIN);
   HAL_NVIC_EnableIRQ(BOARD_CH390_INTERRUPT_IRQn);
+
+  ssh_server_init();
 
   for (;;)
     {

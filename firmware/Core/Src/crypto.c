@@ -7,6 +7,7 @@
 #include "semphr.h"
 #include "main.h"
 #include "xpander.h"
+#include <wolfssl/wolfcrypt/port/atmel/atmel.h>
 
 static SemaphoreHandle_t crypto_mutex;
 static bool crypto_ready;
@@ -18,11 +19,22 @@ static ATCAIfaceCfg crypto_config = {
   .rx_retries = 3,
 };
 
+static int
+crypto_allocate_slot(int type)
+{
+  return type == ATMEL_SLOT_ECDHE ? ATCA_TEMPKEY_KEYID : ATECC_INVALID_SLOT;
+}
+
+static void
+crypto_free_slot(int slot)
+{
+}
+
 void
 crypto_init()
 {
   xpander_init();
-  crypto_mutex = xSemaphoreCreateMutex();
+  crypto_mutex = xSemaphoreCreateRecursiveMutex();
   if (crypto_mutex == NULL)
     {
       Error_Handler();
@@ -32,7 +44,7 @@ crypto_init()
 int
 crypto_lock()
 {
-  if (xSemaphoreTake(crypto_mutex, portMAX_DELAY) != pdTRUE)
+  if (xSemaphoreTakeRecursive(crypto_mutex, portMAX_DELAY) != pdTRUE)
     {
       Error_Handler();
     }
@@ -44,6 +56,13 @@ crypto_lock()
           crypto_unlock();
           return status;
         }
+      wolfCrypt_ATECC_SetConfig(&crypto_config);
+      if (atmel_init() != 0)
+        {
+          crypto_unlock();
+          return ATCA_COMM_FAIL;
+        }
+      atmel_set_slot_allocator(crypto_allocate_slot, crypto_free_slot);
       crypto_ready = true;
     }
   return ATCA_SUCCESS;
@@ -52,7 +71,7 @@ crypto_lock()
 void
 crypto_unlock()
 {
-  if (xSemaphoreGive(crypto_mutex) != pdTRUE)
+  if (xSemaphoreGiveRecursive(crypto_mutex) != pdTRUE)
     {
       Error_Handler();
     }

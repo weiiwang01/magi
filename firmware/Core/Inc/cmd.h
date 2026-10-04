@@ -31,5 +31,6 @@ struct cmd_node_t
 };
 
 void cmd_shell(stream_t *stream);
+int cmd_execute(stream_t *stream, const char *command);
 
 #endif // CMD_H

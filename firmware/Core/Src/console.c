@@ -9,7 +9,7 @@
     .dma.Init.Request = BOARD_UNIT##n##_CONSOLE_DMA_REQUEST,                  \
     .gpio = BOARD_UNIT##n##_CONSOLE_GPIO_PORT,                                \
     .pins = BOARD_UNIT##n##_CONSOLE_TX_PIN | BOARD_UNIT##n##_CONSOLE_RX_PIN,  \
-    .alternate = BOARD_UNIT##n##_CONSOLE_GPIO_AF,                             \
+    .af = BOARD_UNIT##n##_CONSOLE_GPIO_AF,                                    \
     .irq = BOARD_UNIT##n##_CONSOLE_IRQn,                                      \
   }
 
