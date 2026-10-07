@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include "stm32g0xx_hal.h"
+#include "timeout.h"
 
 #define UNIT_COUNT 3U
 
@@ -19,11 +21,14 @@ struct unit
   unit_gpio_t power;
   unit_gpio_t pcie_power;
   unit_gpio_t power_button;
+  unit_gpio_t rpiboot;
   unit_gpio_t activity_led;
   unit_gpio_t power_led;
   unit_gpio_t sense_3v3;
   struct console *console;
   size_t ws2812_index;
+  timeout_t power_button_press;
+  bool power_button_pressed;
 };
 
 extern unit_t *unit_1;
@@ -34,9 +39,13 @@ void unit_init();
 void unit_exti_irq();
 
 void unit_set_power(unit_t *unit, bool enable);
+bool unit_get_power(const unit_t *unit);
 void unit_set_pcie_power(unit_t *unit, bool enable);
-/* The unit task also mirrors the MCU button onto this output every poll. */
 void unit_set_power_button(unit_t *unit, bool enable);
+void unit_set_power_button_press(unit_t *unit, uint32_t ms);
+uint32_t unit_get_power_button_press(const unit_t *unit);
+void unit_set_rpiboot(unit_t *unit, bool enable);
+bool unit_get_rpiboot(const unit_t *unit);
 bool unit_get_3v3(const unit_t *unit);
 bool unit_get_power_led(const unit_t *unit);
 bool unit_get_activity_led(const unit_t *unit);

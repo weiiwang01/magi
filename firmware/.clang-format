@@ -1,0 +1,6 @@
+BasedOnStyle: GNU
+
+SortIncludes: false
+SpaceBeforeParens: ControlStatements
+BinPackArguments: false
+BinPackParameters: false

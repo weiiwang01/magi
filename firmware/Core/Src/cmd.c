@@ -4,6 +4,8 @@
 
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include "adc.h"
 #include "container_of.h"
@@ -12,12 +14,167 @@
 #include "cryptoauthlib.h"
 #include "network.h"
 #include "ssh_server.h"
+#include "unit.h"
 
 #define CMD_LINE_MAX 512
 #define CMD_SYMBOL_MAX 32
 
 #define CMD_SYMBOL_GET "get"
 #define CMD_SYMBOL_SET "set"
+
+typedef struct
+{
+  cmd_node_t node;
+  unit_t **unit;
+} cmd_unit_node_t;
+
+static int
+cmd_read_value(stream_t *stream, char *value, uint32_t size)
+{
+  uint32_t length = 0;
+  stream_status_t result
+      = stream_gets(stream, (uint8_t *)value, size - 1U, &length);
+  if (result & STREAM_ABORT)
+    {
+      return CMD_EXIT_INTERRUPT;
+    }
+  if (stream_error(result & ~STREAM_END))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  if (!(result & STREAM_END) || length == 0
+      || memchr(value, '\0', length) != NULL)
+    {
+      return stream_error(stream_puts(stream, "Invalid value\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : CMD_EXIT_MISUSE;
+    }
+  value[length] = '\0';
+  return CMD_EXIT_OK;
+}
+
+static int
+cmd_read_int(stream_t *stream, int *value)
+{
+  char input[13];
+  int result = cmd_read_value(stream, input, sizeof(input));
+  if (result != CMD_EXIT_OK)
+    {
+      return result;
+    }
+  const char *digits = input[0] == '-' ? input + 1 : input;
+  errno = 0;
+  long number = strtol(input, NULL, 10);
+  if (errno == ERANGE || number < INT_MIN || number > INT_MAX
+      || *digits == '\0' || digits[strspn(digits, "0123456789")] != '\0')
+    {
+      return stream_error(stream_puts(stream, "expected an integer\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : CMD_EXIT_MISUSE;
+    }
+  *value = (int)number;
+  return CMD_EXIT_OK;
+}
+
+static int
+cmd_read_bool(stream_t *stream, bool *value)
+{
+  char input[7];
+  int result = cmd_read_value(stream, input, sizeof(input));
+  if (result != CMD_EXIT_OK)
+    {
+      return result;
+    }
+  if (strcmp(input, "true") != 0 && strcmp(input, "false") != 0)
+    {
+      return stream_error(stream_puts(stream, "Expected true or false\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : CMD_EXIT_MISUSE;
+    }
+  *value = strcmp(input, "true") == 0;
+  return CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_power_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  return stream_error(stream_printf(
+             stream, "%s\r\n", unit_get_power(unit) ? "true" : "false"))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_power_decode(cmd_node_t *cmd, stream_t *stream)
+{
+  bool enable;
+  int result = cmd_read_bool(stream, &enable);
+  if (result != CMD_EXIT_OK)
+    {
+      return result;
+    }
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  unit_set_power(unit, enable);
+  return CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_rpiboot_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  return stream_error(stream_printf(
+             stream, "%s\r\n", unit_get_rpiboot(unit) ? "true" : "false"))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_rpiboot_decode(cmd_node_t *cmd, stream_t *stream)
+{
+  bool enable;
+  int result = cmd_read_bool(stream, &enable);
+  if (result != CMD_EXIT_OK)
+    {
+      return result;
+    }
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  unit_set_rpiboot(unit, enable);
+  return CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_power_button_press_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  return stream_error(
+             stream_printf(stream,
+                           "%lu\r\n",
+                           (unsigned long)unit_get_power_button_press(unit)))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_power_button_press_decode(cmd_node_t *cmd, stream_t *stream)
+{
+  int milliseconds;
+  int result = cmd_read_int(stream, &milliseconds);
+  if (result != CMD_EXIT_OK)
+    {
+      return result;
+    }
+  if (milliseconds < 0 || milliseconds > 60000)
+    {
+      return stream_error(stream_puts(
+                 stream, "Expected milliseconds from 0 to 60000\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : CMD_EXIT_MISUSE;
+    }
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  unit_set_power_button_press(unit, (uint32_t)milliseconds);
+  return CMD_EXIT_OK;
+}
 
 static int
 cmd_console_exec(console_t *console, unsigned int unit, stream_t *stream)
@@ -571,11 +728,77 @@ static cmd_node_t cmd_unit2_console
     = { .symbol = "console", .exec = cmd_unit2_console_exec };
 static cmd_node_t cmd_unit1_console
     = { .symbol = "console", .exec = cmd_unit1_console_exec };
-static cmd_node_t cmd_unit3 = { .symbol = "3", .child = &cmd_unit3_console };
+
+static cmd_unit_node_t cmd_unit1_power_button_press = {
+  .node = { .symbol = "power-button-press",
+            .encode = cmd_unit_power_button_press_encode,
+            .decode = cmd_unit_power_button_press_decode,
+            .next = &cmd_unit1_console },
+  .unit = &unit_1,
+};
+static cmd_unit_node_t cmd_unit1_rpiboot = {
+  .node = { .symbol = "rpiboot",
+            .encode = cmd_unit_rpiboot_encode,
+            .decode = cmd_unit_rpiboot_decode,
+            .next = &cmd_unit1_power_button_press.node },
+  .unit = &unit_1,
+};
+static cmd_unit_node_t cmd_unit1_power = {
+  .node = { .symbol = "power",
+            .encode = cmd_unit_power_encode,
+            .decode = cmd_unit_power_decode,
+            .next = &cmd_unit1_rpiboot.node },
+  .unit = &unit_1,
+};
+static cmd_unit_node_t cmd_unit2_power_button_press = {
+  .node = { .symbol = "power-button-press",
+            .encode = cmd_unit_power_button_press_encode,
+            .decode = cmd_unit_power_button_press_decode,
+            .next = &cmd_unit2_console },
+  .unit = &unit_2,
+};
+static cmd_unit_node_t cmd_unit2_rpiboot = {
+  .node = { .symbol = "rpiboot",
+            .encode = cmd_unit_rpiboot_encode,
+            .decode = cmd_unit_rpiboot_decode,
+            .next = &cmd_unit2_power_button_press.node },
+  .unit = &unit_2,
+};
+static cmd_unit_node_t cmd_unit2_power = {
+  .node = { .symbol = "power",
+            .encode = cmd_unit_power_encode,
+            .decode = cmd_unit_power_decode,
+            .next = &cmd_unit2_rpiboot.node },
+  .unit = &unit_2,
+};
+static cmd_unit_node_t cmd_unit3_power_button_press = {
+  .node = { .symbol = "power-button-press",
+            .encode = cmd_unit_power_button_press_encode,
+            .decode = cmd_unit_power_button_press_decode,
+            .next = &cmd_unit3_console },
+  .unit = &unit_3,
+};
+static cmd_unit_node_t cmd_unit3_rpiboot = {
+  .node = { .symbol = "rpiboot",
+            .encode = cmd_unit_rpiboot_encode,
+            .decode = cmd_unit_rpiboot_decode,
+            .next = &cmd_unit3_power_button_press.node },
+  .unit = &unit_3,
+};
+static cmd_unit_node_t cmd_unit3_power = {
+  .node = { .symbol = "power",
+            .encode = cmd_unit_power_encode,
+            .decode = cmd_unit_power_decode,
+            .next = &cmd_unit3_rpiboot.node },
+  .unit = &unit_3,
+};
+
+static cmd_node_t cmd_unit3
+    = { .symbol = "3", .child = &cmd_unit3_power.node };
 static cmd_node_t cmd_unit2
-    = { .symbol = "2", .child = &cmd_unit2_console, .next = &cmd_unit3 };
+    = { .symbol = "2", .child = &cmd_unit2_power.node, .next = &cmd_unit3 };
 static cmd_node_t cmd_unit1
-    = { .symbol = "1", .child = &cmd_unit1_console, .next = &cmd_unit2 };
+    = { .symbol = "1", .child = &cmd_unit1_power.node, .next = &cmd_unit2 };
 static cmd_node_t cmd_magi_unit = { .symbol = "unit", .child = &cmd_unit1 };
 
 static cmd_node_t cmd_magi_controller = {
