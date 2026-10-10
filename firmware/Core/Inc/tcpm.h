@@ -147,6 +147,10 @@ void tcpm_sync_port(tcpm_t *tcpm, uint8_t port);
 void tcpm_set_attached(tcpm_t *tcpm, uint8_t port, bool attached);
 void tcpm_contract_established(tcpm_t *tcpm, uint8_t port);
 void tcpm_reset_contract(tcpm_t *tcpm, uint8_t port);
+void tcpm_get_power_contract(tcpm_t *tcpm,
+                             uint8_t port,
+                             uint32_t *voltage_mv,
+                             uint32_t *current_ma);
 
 /* Source: validate a received RDO and select our corresponding source PDO. */
 bool tcpm_validate_request(tcpm_t *tcpm, uint8_t port, uint32_t rdo);

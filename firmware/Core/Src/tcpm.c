@@ -32,6 +32,7 @@ typedef struct
   uint32_t partner_source_pdos[PDO_MAX_OBJECTS];
   uint32_t partner_source_count;
   uint32_t requested_pdo;
+  uint32_t requested_rdo;
   tcpm_typec_role_t power_role;
   tcpm_typec_data_role_t data_role;
   tcpm_cc_t cc;
@@ -193,6 +194,7 @@ tcpm_clear_requested_pdo(tcpm_t *tcpm, uint8_t port)
 {
   uint32_t primask = tcpm_lock();
   tcpm->ports[port].requested_pdo = 0U;
+  tcpm->ports[port].requested_rdo = 0U;
   tcpm_unlock(primask);
 }
 
@@ -229,6 +231,8 @@ tcpm_sync_port(tcpm_t *tcpm, uint8_t port)
   if (p->power_role != power_role)
     {
       p->requested_pdo = 0U;
+      p->requested_rdo = 0U;
+      p->explicit_contract = false;
     }
   bool data_changed = p->data_role != data_role;
   p->power_role = power_role;
@@ -260,6 +264,7 @@ tcpm_set_attached(tcpm_t *tcpm, uint8_t port, bool attached)
     {
       p->explicit_contract = false;
       p->requested_pdo = 0U;
+      p->requested_rdo = 0U;
       p->partner_source_count = 0U;
       tcpm_reset_modes_locked(p, port);
       tcpm_set_source_power_locked(p, port, false);
@@ -285,9 +290,25 @@ tcpm_reset_contract(tcpm_t *tcpm, uint8_t port)
   uint32_t primask = tcpm_lock();
   p->explicit_contract = false;
   p->requested_pdo = 0U;
+  p->requested_rdo = 0U;
   tcpm_reset_modes_locked(p, port);
   tcpm_update_usb_data_locked(p, port);
   tcpm_unlock(primask);
+}
+
+void
+tcpm_get_power_contract(tcpm_t *tcpm,
+                         uint8_t port,
+                         uint32_t *voltage_mv,
+                         uint32_t *current_ma)
+{
+  uint32_t primask = tcpm_lock();
+  tcpm_port_t *p = &tcpm->ports[port];
+  uint32_t pdo = p->explicit_contract ? p->requested_pdo : 0U;
+  uint32_t rdo = p->explicit_contract ? p->requested_rdo : 0U;
+  tcpm_unlock(primask);
+  *voltage_mv = pdo_fixed_voltage(pdo);
+  *current_ma = rdo_op_current(rdo);
 }
 
 bool
@@ -307,6 +328,7 @@ tcpm_validate_request(tcpm_t *tcpm, uint8_t port, uint32_t rdo)
   else
     {
       p->requested_pdo = valid ? source_pdos[0] : 0U;
+      p->requested_rdo = valid ? rdo : 0U;
     }
   tcpm_unlock(primask);
   return valid;
@@ -329,6 +351,7 @@ tcpm_build_request(tcpm_t *tcpm, uint8_t port, uint32_t *rdo)
       return false;
     }
   p->requested_pdo = 0U;
+  p->requested_rdo = 0U;
   for (uint32_t i = 0U; i < p->partner_source_count; ++i)
     {
       uint32_t source = p->partner_source_pdos[i];
@@ -367,6 +390,7 @@ tcpm_build_request(tcpm_t *tcpm, uint8_t port, uint32_t *rdo)
           flags |= RDO_CAP_MISMATCH;
         }
       *rdo = RDO_FIXED(position, current, desired_current, flags);
+      p->requested_rdo = *rdo;
     }
   tcpm_unlock(primask);
   return position != 0U;

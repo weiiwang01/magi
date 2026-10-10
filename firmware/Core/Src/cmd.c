@@ -14,6 +14,7 @@
 #include "cryptoauthlib.h"
 #include "network.h"
 #include "ssh_server.h"
+#include "tcpm.h"
 #include "unit.h"
 
 #define CMD_LINE_MAX 512
@@ -27,6 +28,12 @@ typedef struct
   cmd_node_t node;
   unit_t **unit;
 } cmd_unit_node_t;
+
+typedef struct
+{
+  cmd_node_t node;
+  usb_t usb;
+} cmd_usb_node_t;
 
 static int
 cmd_read_value(stream_t *stream, char *value, uint32_t size)
@@ -326,7 +333,7 @@ cmd_crypto_lock_state(uint8_t value)
 }
 
 static int
-cmd_magi_controller_crypto_status_exec(cmd_node_t *cmd, stream_t *stream)
+cmd_magi_controller_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
 {
   atecc608_config_t config;
   uint8_t revision[4];
@@ -420,6 +427,44 @@ cmd_magi_controller_crypto_status_exec(cmd_node_t *cmd, stream_t *stream)
         }
     }
   return CMD_EXIT_OK;
+}
+
+static int
+cmd_usb_power_status_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  usb_t usb = container_of(cmd, cmd_usb_node_t, node)->usb;
+  uint32_t contract_voltage_mv, contract_current_ma;
+  tcpm_get_power_contract(tcpm, usb, &contract_voltage_mv, &contract_current_ma);
+  uint32_t voltage_mv = adc_get_usb_voltage(usb);
+  uint32_t current_ma = adc_get_usb_current_in(usb);
+  uint32_t power_mw = (uint32_t)(((uint64_t)voltage_mv * current_ma + 500U)
+                               / 1000U);
+  stream_status_t result
+      = contract_voltage_mv == 0U
+            ? stream_puts(stream, "Established contract: none\r\n")
+            : stream_printf(stream,
+                            "Established contract: %lu.%03lu V, "
+                            "%lu.%03lu A\r\n",
+                            (unsigned long)(contract_voltage_mv / 1000U),
+                            (unsigned long)(contract_voltage_mv % 1000U),
+                            (unsigned long)(contract_current_ma / 1000U),
+                            (unsigned long)(contract_current_ma % 1000U));
+  if (stream_error(result))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  return stream_error(stream_printf(stream,
+                                    "Voltage: %lu.%03lu V\r\n"
+                                    "Current in: %lu.%03lu A\r\n"
+                                    "Power in: %lu.%03lu W\r\n",
+                                    (unsigned long)(voltage_mv / 1000U),
+                                    (unsigned long)(voltage_mv % 1000U),
+                                    (unsigned long)(current_ma / 1000U),
+                                    (unsigned long)(current_ma % 1000U),
+                                    (unsigned long)(power_mw / 1000U),
+                                    (unsigned long)(power_mw % 1000U)))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
 }
 
 static int
@@ -690,7 +735,7 @@ static cmd_node_t cmd_magi_controller_ssh = {
 };
 static cmd_node_t cmd_magi_controller_crypto_status = {
   .symbol = "status",
-  .exec = cmd_magi_controller_crypto_status_exec,
+  .encode = cmd_magi_controller_crypto_status_encode,
 };
 static cmd_node_t cmd_magi_controller_crypto = {
   .symbol = "crypto",
@@ -799,7 +844,32 @@ static cmd_node_t cmd_unit2
     = { .symbol = "2", .child = &cmd_unit2_power.node, .next = &cmd_unit3 };
 static cmd_node_t cmd_unit1
     = { .symbol = "1", .child = &cmd_unit1_power.node, .next = &cmd_unit2 };
-static cmd_node_t cmd_magi_unit = { .symbol = "unit", .child = &cmd_unit1 };
+static cmd_usb_node_t cmd_usb0_power_status = {
+  .node = { .symbol = "status", .encode = cmd_usb_power_status_encode },
+  .usb = USB0,
+};
+static cmd_usb_node_t cmd_usb1_power_status = {
+  .node = { .symbol = "status", .encode = cmd_usb_power_status_encode },
+  .usb = USB1,
+};
+static cmd_node_t cmd_usb0_power = {
+  .symbol = "power", .child = &cmd_usb0_power_status.node,
+};
+static cmd_node_t cmd_usb1_power = {
+  .symbol = "power", .child = &cmd_usb1_power_status.node,
+};
+static cmd_node_t cmd_usb1 = {
+  .symbol = "1", .child = &cmd_usb1_power,
+};
+static cmd_node_t cmd_usb0 = {
+  .symbol = "0", .child = &cmd_usb0_power, .next = &cmd_usb1,
+};
+static cmd_node_t cmd_magi_usb = {
+  .symbol = "usb", .child = &cmd_usb0,
+};
+static cmd_node_t cmd_magi_unit = {
+  .symbol = "unit", .child = &cmd_unit1, .next = &cmd_magi_usb,
+};
 
 static cmd_node_t cmd_magi_controller = {
   .symbol = "controller",
