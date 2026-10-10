@@ -6,7 +6,8 @@
 	(paper "A4")
 	(title_block
 		(title "Trilithon Magi")
-		(rev "2.0")
+		(date "2026-10-06")
+		(rev "2.1")
 	)
 	(lib_symbols
 		(symbol "Connector:USB_C_Receptacle"

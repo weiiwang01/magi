@@ -6,7 +6,8 @@
 	(paper "A4")
 	(title_block
 		(title "Trilithon Magi")
-		(rev "2.0")
+		(date "2026-10-06")
+		(rev "2.1")
 	)
 	(lib_symbols
 		(symbol "Mechanical:MountingHole_Pad"
@@ -249,19 +250,19 @@
 		)
 	)
 	(no_connect
-		(at 53.34 158.75)
+		(at 53.34 156.21)
 		(uuid "3c368fc6-7982-49ae-ad51-7649b61bef38")
 	)
 	(no_connect
-		(at 55.88 158.75)
+		(at 55.88 156.21)
 		(uuid "4707eefe-c13f-4b5c-a593-36b6c8fc669c")
 	)
 	(no_connect
-		(at 58.42 158.75)
+		(at 58.42 156.21)
 		(uuid "59c5bda4-c9fc-42be-aef0-29ae20da5b76")
 	)
 	(no_connect
-		(at 60.96 158.75)
+		(at 60.96 156.21)
 		(uuid "ff6cb564-f592-4e5f-ad5e-4b041f35fe0e")
 	)
 	(wire
@@ -386,7 +387,7 @@
 	)
 	(wire
 		(pts
-			(xy 20.32 52.07) (xy 20.32 151.13)
+			(xy 20.32 52.07) (xy 20.32 148.59)
 		)
 		(stroke
 			(width 0)
@@ -646,7 +647,7 @@
 	)
 	(wire
 		(pts
-			(xy 15.24 46.99) (xy 15.24 156.21)
+			(xy 15.24 46.99) (xy 15.24 153.67)
 		)
 		(stroke
 			(width 0)
@@ -686,7 +687,7 @@
 	)
 	(wire
 		(pts
-			(xy 26.67 59.69) (xy 26.67 142.24)
+			(xy 26.67 59.69) (xy 26.67 140.97)
 		)
 		(stroke
 			(width 0)
@@ -706,7 +707,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 54.61) (xy 22.86 148.59)
+			(xy 22.86 54.61) (xy 22.86 146.05)
 		)
 		(stroke
 			(width 0)
@@ -756,7 +757,7 @@
 	)
 	(wire
 		(pts
-			(xy 29.21 139.7) (xy 34.29 139.7)
+			(xy 29.21 138.43) (xy 34.29 138.43)
 		)
 		(stroke
 			(width 0)
@@ -766,7 +767,7 @@
 	)
 	(wire
 		(pts
-			(xy 31.75 64.77) (xy 31.75 137.16)
+			(xy 31.75 64.77) (xy 31.75 135.89)
 		)
 		(stroke
 			(width 0)
@@ -956,7 +957,7 @@
 	)
 	(wire
 		(pts
-			(xy 17.78 49.53) (xy 17.78 153.67)
+			(xy 17.78 49.53) (xy 17.78 151.13)
 		)
 		(stroke
 			(width 0)
@@ -1006,16 +1007,6 @@
 	)
 	(wire
 		(pts
-			(xy 102.87 91.44) (xy 102.87 95.25)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "90c66cde-4c51-44fa-8201-2d40b2818598")
-	)
-	(wire
-		(pts
 			(xy 78.74 91.44) (xy 78.74 95.25)
 		)
 		(stroke
@@ -1046,7 +1037,7 @@
 	)
 	(wire
 		(pts
-			(xy 17.78 153.67) (xy 34.29 153.67)
+			(xy 17.78 151.13) (xy 34.29 151.13)
 		)
 		(stroke
 			(width 0)
@@ -1116,7 +1107,7 @@
 	)
 	(wire
 		(pts
-			(xy 29.21 62.23) (xy 29.21 139.7)
+			(xy 29.21 62.23) (xy 29.21 138.43)
 		)
 		(stroke
 			(width 0)
@@ -1236,7 +1227,7 @@
 	)
 	(wire
 		(pts
-			(xy 20.32 151.13) (xy 34.29 151.13)
+			(xy 20.32 148.59) (xy 34.29 148.59)
 		)
 		(stroke
 			(width 0)
@@ -1246,7 +1237,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 148.59) (xy 34.29 148.59)
+			(xy 22.86 146.05) (xy 34.29 146.05)
 		)
 		(stroke
 			(width 0)
@@ -1266,7 +1257,7 @@
 	)
 	(wire
 		(pts
-			(xy 26.67 142.24) (xy 34.29 142.24)
+			(xy 26.67 140.97) (xy 34.29 140.97)
 		)
 		(stroke
 			(width 0)
@@ -1326,7 +1317,7 @@
 	)
 	(wire
 		(pts
-			(xy 15.24 156.21) (xy 34.29 156.21)
+			(xy 15.24 153.67) (xy 34.29 153.67)
 		)
 		(stroke
 			(width 0)
@@ -1446,7 +1437,7 @@
 	)
 	(wire
 		(pts
-			(xy 31.75 137.16) (xy 34.29 137.16)
+			(xy 31.75 135.89) (xy 34.29 135.89)
 		)
 		(stroke
 			(width 0)
@@ -1476,16 +1467,6 @@
 	)
 	(wire
 		(pts
-			(xy 48.26 91.44) (xy 48.26 95.25)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f43fee3a-bd58-477c-895e-81e661642a75")
-	)
-	(wire
-		(pts
 			(xy 171.45 129.54) (xy 171.45 133.35)
 		)
 		(stroke
@@ -1493,16 +1474,6 @@
 			(type default)
 		)
 		(uuid "f82583cc-86a4-4a0f-aee8-4662f6906680")
-	)
-	(wire
-		(pts
-			(xy 157.48 91.44) (xy 157.48 95.25)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f955d777-729b-4c28-8131-6645b4d46e75")
 	)
 	(wire
 		(pts
@@ -1614,13 +1585,13 @@
 		)
 		(column_widths 13.97 25.4)
 		(row_heights 2.54 2.54 2.54 2.54 2.54 2.54 2.54 2.54 2.54 2.54 2.54 2.54
-			2.54
+			2.54 2.54 2.54
 		)
 		(uuid "1bfa11af-a9f3-4ce8-8023-315529782da7")
 		(cells
 			(table_cell "Test Points"
 				(exclude_from_sim no)
-				(at 57.15 161.29 0)
+				(at 80.01 157.48 0)
 				(size 39.37 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 2 1)
@@ -1637,7 +1608,7 @@
 			)
 			(table_cell ""
 				(exclude_from_sim no)
-				(at 71.12 161.29 0)
+				(at 93.98 157.48 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 0 0)
@@ -1654,7 +1625,7 @@
 			)
 			(table_cell "TP1"
 				(exclude_from_sim no)
-				(at 57.15 163.83 0)
+				(at 80.01 160.02 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1671,7 +1642,7 @@
 			)
 			(table_cell "Unit 1 5V_EN"
 				(exclude_from_sim no)
-				(at 71.12 163.83 0)
+				(at 93.98 160.02 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1688,7 +1659,7 @@
 			)
 			(table_cell "TP2"
 				(exclude_from_sim no)
-				(at 57.15 166.37 0)
+				(at 80.01 162.56 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1705,7 +1676,7 @@
 			)
 			(table_cell "Unit 2 5V_EN"
 				(exclude_from_sim no)
-				(at 71.12 166.37 0)
+				(at 93.98 162.56 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1722,7 +1693,7 @@
 			)
 			(table_cell "TP3"
 				(exclude_from_sim no)
-				(at 57.15 168.91 0)
+				(at 80.01 165.1 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1739,7 +1710,7 @@
 			)
 			(table_cell "Unit 3 5V_EN"
 				(exclude_from_sim no)
-				(at 71.12 168.91 0)
+				(at 93.98 165.1 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1756,7 +1727,7 @@
 			)
 			(table_cell "TP4"
 				(exclude_from_sim no)
-				(at 57.15 171.45 0)
+				(at 80.01 167.64 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1773,7 +1744,7 @@
 			)
 			(table_cell "MCU RESET"
 				(exclude_from_sim no)
-				(at 71.12 171.45 0)
+				(at 93.98 167.64 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1790,7 +1761,7 @@
 			)
 			(table_cell "TP5"
 				(exclude_from_sim no)
-				(at 57.15 173.99 0)
+				(at 80.01 170.18 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1807,7 +1778,7 @@
 			)
 			(table_cell "MCU SWDIO"
 				(exclude_from_sim no)
-				(at 71.12 173.99 0)
+				(at 93.98 170.18 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1824,7 +1795,7 @@
 			)
 			(table_cell "TP6"
 				(exclude_from_sim no)
-				(at 57.15 176.53 0)
+				(at 80.01 172.72 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1841,7 +1812,7 @@
 			)
 			(table_cell "MCU SWCLK"
 				(exclude_from_sim no)
-				(at 71.12 176.53 0)
+				(at 93.98 172.72 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1858,7 +1829,7 @@
 			)
 			(table_cell "TP7"
 				(exclude_from_sim no)
-				(at 57.15 179.07 0)
+				(at 80.01 175.26 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1875,7 +1846,7 @@
 			)
 			(table_cell "MCU PE10_USART5_TX"
 				(exclude_from_sim no)
-				(at 71.12 179.07 0)
+				(at 93.98 175.26 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1892,7 +1863,7 @@
 			)
 			(table_cell "TP8"
 				(exclude_from_sim no)
-				(at 57.15 181.61 0)
+				(at 80.01 177.8 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1909,7 +1880,7 @@
 			)
 			(table_cell "USB0 VBUS"
 				(exclude_from_sim no)
-				(at 71.12 181.61 0)
+				(at 93.98 177.8 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1926,7 +1897,7 @@
 			)
 			(table_cell "TP9"
 				(exclude_from_sim no)
-				(at 57.15 184.15 0)
+				(at 80.01 180.34 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1943,7 +1914,7 @@
 			)
 			(table_cell "USB1 VBUS"
 				(exclude_from_sim no)
-				(at 71.12 184.15 0)
+				(at 93.98 180.34 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1960,7 +1931,7 @@
 			)
 			(table_cell "TP10"
 				(exclude_from_sim no)
-				(at 57.15 186.69 0)
+				(at 80.01 182.88 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1977,7 +1948,7 @@
 			)
 			(table_cell "+20V"
 				(exclude_from_sim no)
-				(at 71.12 186.69 0)
+				(at 93.98 182.88 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -1994,7 +1965,7 @@
 			)
 			(table_cell "TP11"
 				(exclude_from_sim no)
-				(at 57.15 189.23 0)
+				(at 80.01 185.42 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -2009,9 +1980,9 @@
 				)
 				(uuid "2f6d5e18-902e-4274-8dbe-3cd33ba845cd")
 			)
-			(table_cell "AUXILIARY POWER"
+			(table_cell "AUXILIARY POWER IN"
 				(exclude_from_sim no)
-				(at 71.12 189.23 0)
+				(at 93.98 185.42 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -2026,9 +1997,77 @@
 				)
 				(uuid "b8d8c1e3-cf6b-4b4e-958c-68ca6e76e735")
 			)
-			(table_cell "TP12-13"
+			(table_cell "TP12"
 				(exclude_from_sim no)
-				(at 57.15 191.77 0)
+				(at 80.01 187.96 0)
+				(size 13.97 2.54)
+				(margins 0.9525 0.9525 0.9525 0.9525)
+				(span 1 1)
+				(fill
+					(type none)
+				)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left top)
+				)
+				(uuid "a1713662-58f8-47e4-9de6-fb696b98d96e")
+			)
+			(table_cell "+3V3"
+				(exclude_from_sim no)
+				(at 93.98 187.96 0)
+				(size 25.4 2.54)
+				(margins 0.9525 0.9525 0.9525 0.9525)
+				(span 1 1)
+				(fill
+					(type none)
+				)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left top)
+				)
+				(uuid "10c6b5e9-3dc8-4f4e-a159-c384298f14cf")
+			)
+			(table_cell "TP13"
+				(exclude_from_sim no)
+				(at 80.01 190.5 0)
+				(size 13.97 2.54)
+				(margins 0.9525 0.9525 0.9525 0.9525)
+				(span 1 1)
+				(fill
+					(type none)
+				)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left top)
+				)
+				(uuid "34704e69-8764-4b9b-b21e-80130eb73e27")
+			)
+			(table_cell "ATECC608B DATA"
+				(exclude_from_sim no)
+				(at 93.98 190.5 0)
+				(size 25.4 2.54)
+				(margins 0.9525 0.9525 0.9525 0.9525)
+				(span 1 1)
+				(fill
+					(type none)
+				)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left top)
+				)
+				(uuid "49c858aa-38d1-4bef-8c81-ae7677fd0f01")
+			)
+			(table_cell "TP14-16\n\n"
+				(exclude_from_sim no)
+				(at 80.01 193.04 0)
 				(size 13.97 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -2045,7 +2084,7 @@
 			)
 			(table_cell "GND"
 				(exclude_from_sim no)
-				(at 71.12 191.77 0)
+				(at 93.98 193.04 0)
 				(size 25.4 2.54)
 				(margins 0.9525 0.9525 0.9525 0.9525)
 				(span 1 1)
@@ -2094,7 +2133,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 129.54 185.42 0)
+		(at 156.21 187.96 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2105,7 +2144,7 @@
 		(fields_autoplaced yes)
 		(uuid "188a6fc3-397c-4397-abb9-99a3f44bd7fd")
 		(property "Reference" "#PWR0245"
-			(at 129.54 191.77 0)
+			(at 156.21 194.31 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2116,7 +2155,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 129.54 190.5 0)
+			(at 156.21 193.04 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2126,7 +2165,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 129.54 185.42 0)
+			(at 156.21 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2137,7 +2176,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 129.54 185.42 0)
+			(at 156.21 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2148,7 +2187,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 129.54 185.42 0)
+			(at 156.21 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2172,7 +2211,7 @@
 	)
 	(symbol
 		(lib_id "Mechanical:MountingHole_Pad")
-		(at 129.54 182.88 0)
+		(at 156.21 185.42 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2182,7 +2221,7 @@
 		(dnp no)
 		(uuid "7b86d93d-3f35-4a00-80b8-e6fb461c0cfc")
 		(property "Reference" "H2"
-			(at 132.08 182.372 0)
+			(at 158.75 184.912 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2193,7 +2232,7 @@
 			)
 		)
 		(property "Value" "MountingHole"
-			(at 132.08 184.15 0)
+			(at 158.75 186.69 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2204,7 +2243,7 @@
 			)
 		)
 		(property "Footprint" "Magi:MOUNTING-HOLE"
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2215,7 +2254,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2226,7 +2265,7 @@
 			)
 		)
 		(property "Description" "Mounting Hole with connection"
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2237,7 +2276,7 @@
 			)
 		)
 		(property "Sim.Device" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2248,7 +2287,7 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2259,7 +2298,7 @@
 			)
 		)
 		(property "KLC_S4.2_DVDD" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2270,7 +2309,7 @@
 			)
 		)
 		(property "KLC_S4.2_VREG_LX" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2281,7 +2320,7 @@
 			)
 		)
 		(property "KLC_S3.3" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2292,7 +2331,7 @@
 			)
 		)
 		(property "KLC_S4.1" ""
-			(at 129.54 182.88 0)
+			(at 156.21 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2316,7 +2355,7 @@
 	)
 	(symbol
 		(lib_id "Mechanical:MountingHole_Pad")
-		(at 109.22 182.88 0)
+		(at 135.89 185.42 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2326,7 +2365,7 @@
 		(dnp no)
 		(uuid "8990701b-2e0f-46b3-9304-8f096f84f162")
 		(property "Reference" "H1"
-			(at 112.014 182.626 0)
+			(at 138.684 185.166 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2337,7 +2376,7 @@
 			)
 		)
 		(property "Value" "MountingHole"
-			(at 112.014 184.658 0)
+			(at 138.684 187.198 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2348,7 +2387,7 @@
 			)
 		)
 		(property "Footprint" "Magi:MOUNTING-HOLE"
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2359,7 +2398,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2370,7 +2409,7 @@
 			)
 		)
 		(property "Description" "Mounting Hole with connection"
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2381,7 +2420,7 @@
 			)
 		)
 		(property "Sim.Device" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2392,7 +2431,7 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2403,7 +2442,7 @@
 			)
 		)
 		(property "KLC_S4.2_DVDD" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2414,7 +2453,7 @@
 			)
 		)
 		(property "KLC_S4.2_VREG_LX" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2425,7 +2464,7 @@
 			)
 		)
 		(property "KLC_S3.3" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2436,7 +2475,7 @@
 			)
 		)
 		(property "KLC_S4.1" ""
-			(at 109.22 182.88 0)
+			(at 135.89 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2460,7 +2499,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 109.22 185.42 0)
+		(at 135.89 187.96 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2471,7 +2510,7 @@
 		(fields_autoplaced yes)
 		(uuid "ac5dd95c-6a5a-4c32-aa28-8546ba31555b")
 		(property "Reference" "#PWR0244"
-			(at 109.22 191.77 0)
+			(at 135.89 194.31 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2482,7 +2521,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 109.22 190.5 0)
+			(at 135.89 193.04 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2492,7 +2531,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 109.22 185.42 0)
+			(at 135.89 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2503,7 +2542,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 109.22 185.42 0)
+			(at 135.89 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2514,7 +2553,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 109.22 185.42 0)
+			(at 135.89 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2739,16 +2778,6 @@
 					(size 1.27 1.27)
 				)
 				(justify left top)
-			)
-		)
-		(pin "~{INTERRUPT}" input
-			(at 48.26 95.25 90)
-			(uuid "48ada3bd-9efd-4856-91eb-481d169ddfe7")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
 			)
 		)
 		(pin "UART_RX" input
@@ -3204,16 +3233,6 @@
 				(justify right)
 			)
 		)
-		(pin "~{INTERRUPT}" input
-			(at 102.87 95.25 90)
-			(uuid "450df734-c3b1-473c-8a71-95d4456f9e5d")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
 		(pin "PWR_BTN" input
 			(at 114.3 95.25 90)
 			(uuid "24753004-907d-4f79-9bdf-988002437b84")
@@ -3620,16 +3639,6 @@
 				(justify right)
 			)
 		)
-		(pin "~{INTERRUPT}" input
-			(at 157.48 95.25 90)
-			(uuid "4594282d-4f58-4342-b06d-d98798d62776")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
 		(pin "USB3_1_TX+" bidirectional
 			(at 233.68 95.25 90)
 			(uuid "d7435d94-f3af-4277-95b5-fef9f7e15b73")
@@ -3800,7 +3809,7 @@
 	)
 	(sheet
 		(at 250.19 38.1)
-		(size 21.59 120.65)
+		(size 21.59 118.11)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -3826,7 +3835,7 @@
 			)
 		)
 		(property "Sheetfile" "Connector.kicad_sch"
-			(at 250.19 159.3346 0)
+			(at 250.19 156.7946 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4057,7 +4066,7 @@
 	)
 	(sheet
 		(at 34.29 133.35)
-		(size 212.09 25.4)
+		(size 212.09 22.86)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -4071,7 +4080,7 @@
 		)
 		(uuid "cfbdeb49-e250-4720-afa3-fc8a465c8772")
 		(property "Sheetname" "Ethernet Switch"
-			(at 34.29 161.29 0)
+			(at 34.29 158.75 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4094,7 +4103,7 @@
 			)
 		)
 		(pin "SMI_SDA" bidirectional
-			(at 34.29 137.16 180)
+			(at 34.29 135.89 180)
 			(uuid "4deab192-1092-4c5a-a843-ff5ad38bbe99")
 			(effects
 				(font
@@ -4104,7 +4113,7 @@
 			)
 		)
 		(pin "SMI_SCL" input
-			(at 34.29 139.7 180)
+			(at 34.29 138.43 180)
 			(uuid "2855ba52-8718-435b-bdd9-2b7860b8e529")
 			(effects
 				(font
@@ -4124,7 +4133,7 @@
 			)
 		)
 		(pin "P3MDIB-" bidirectional
-			(at 34.29 148.59 180)
+			(at 34.29 146.05 180)
 			(uuid "27f39265-18a6-451d-921b-8feb39106a89")
 			(effects
 				(font
@@ -4144,7 +4153,7 @@
 			)
 		)
 		(pin "P3MDIC+" bidirectional
-			(at 53.34 158.75 270)
+			(at 53.34 156.21 270)
 			(uuid "dd6c385e-c989-43cd-a345-60b61a407547")
 			(effects
 				(font
@@ -4214,7 +4223,7 @@
 			)
 		)
 		(pin "P3MDIA+" bidirectional
-			(at 34.29 156.21 180)
+			(at 34.29 153.67 180)
 			(uuid "31c1f80e-5c23-4d68-8228-50e9a801ff76")
 			(effects
 				(font
@@ -4224,7 +4233,7 @@
 			)
 		)
 		(pin "P3MDIA-" bidirectional
-			(at 34.29 153.67 180)
+			(at 34.29 151.13 180)
 			(uuid "34a954d4-b128-4c41-a810-b20e5f1b6430")
 			(effects
 				(font
@@ -4234,7 +4243,7 @@
 			)
 		)
 		(pin "P3MDIC-" bidirectional
-			(at 55.88 158.75 270)
+			(at 55.88 156.21 270)
 			(uuid "32445899-733e-465c-b0ab-3a188d2b55a0")
 			(effects
 				(font
@@ -4244,7 +4253,7 @@
 			)
 		)
 		(pin "P3MDID-" bidirectional
-			(at 60.96 158.75 270)
+			(at 60.96 156.21 270)
 			(uuid "b0f900e5-e2c7-45f8-9f9b-dcfd893372d9")
 			(effects
 				(font
@@ -4274,7 +4283,7 @@
 			)
 		)
 		(pin "P3MDID+" bidirectional
-			(at 58.42 158.75 270)
+			(at 58.42 156.21 270)
 			(uuid "a20a255b-1e65-4233-9f1e-d508dc0ec3ec")
 			(effects
 				(font
@@ -4284,7 +4293,7 @@
 			)
 		)
 		(pin "P3MDIB+" bidirectional
-			(at 34.29 151.13 180)
+			(at 34.29 148.59 180)
 			(uuid "14d38de7-f2bd-4ec1-882d-dbd98516f27c")
 			(effects
 				(font
@@ -4474,7 +4483,7 @@
 			)
 		)
 		(pin "~{RESET}" input
-			(at 34.29 142.24 180)
+			(at 34.29 140.97 180)
 			(uuid "4181fd7c-0eaa-4cfe-bcf6-9e2d8e08a4d8")
 			(effects
 				(font
@@ -4890,17 +4899,7 @@
 				(justify right)
 			)
 		)
-		(pin "PF9_USART6_TX" bidirectional
-			(at 204.47 45.72 0)
-			(uuid "9115e4e2-bdc3-4887-9a5c-9054c3382a1b")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "PD5_USART2_TX" bidirectional
+		(pin "PD5_USART2_TX" output
 			(at 204.47 48.26 0)
 			(uuid "829ca617-0698-402a-8c0e-d11c0c444c41")
 			(effects
@@ -4938,16 +4937,6 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
-			)
-		)
-		(pin "PB0" output
-			(at 102.87 91.44 270)
-			(uuid "5e6e3448-6cf0-45f3-854e-b2f394e6fce3")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
 			)
 		)
 		(pin "PB1" output
@@ -5100,16 +5089,6 @@
 				(justify right)
 			)
 		)
-		(pin "PF1" output
-			(at 48.26 91.44 270)
-			(uuid "f883e9ce-5c84-4a36-a205-0db230370e04")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
 		(pin "PF0" output
 			(at 204.47 54.61 0)
 			(uuid "4ec16192-07c9-4194-b552-ceea25b01b2e")
@@ -5121,23 +5100,23 @@
 			)
 		)
 		(pin "PC13" output
-			(at 62.23 91.44 270)
+			(at 204.47 62.23 0)
 			(uuid "5928747f-fbb6-4b21-9457-a7fc4cf432b8")
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 		(pin "PC12" output
-			(at 204.47 62.23 0)
+			(at 62.23 91.44 270)
 			(uuid "cfa3d871-14ab-4f93-8a4e-46984a8c18e0")
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 		(pin "PE4" output
@@ -5290,14 +5269,14 @@
 				(justify left)
 			)
 		)
-		(pin "PD11" output
-			(at 157.48 91.44 270)
-			(uuid "e47dd760-989b-46f1-b7ba-5fd106c33030")
+		(pin "PD6_USART2_RX" input
+			(at 204.47 45.72 0)
+			(uuid "18b88051-e858-4aa0-a224-48ad01de96c8")
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 		(instances

@@ -6,7 +6,8 @@
 	(paper "A4")
 	(title_block
 		(title "Trilithon Magi")
-		(rev "2.0")
+		(date "2026-10-06")
+		(rev "2.1")
 	)
 	(lib_symbols
 		(symbol "74xGxx:74AUP1G125"
@@ -7555,6 +7556,10 @@
 		(uuid "a2f40644-bbe4-416e-9320-23a9ae34dad1")
 	)
 	(no_connect
+		(at 35.56 77.47)
+		(uuid "b53620e1-affc-4b87-b49a-2ce674f38aa8")
+	)
+	(no_connect
 		(at 129.54 99.06)
 		(uuid "b6262ae8-6aeb-447b-a3a8-17401ea64622")
 	)
@@ -9230,17 +9235,6 @@
 			(justify left)
 		)
 		(uuid "ba4795eb-2b31-4a68-b222-f8f131e3edc0")
-	)
-	(hierarchical_label "~{INTERRUPT}"
-		(shape input)
-		(at 35.56 77.47 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "bbcc74af-c240-4d58-9422-7deea300f4bf")
 	)
 	(hierarchical_label "UART_TX"
 		(shape output)
