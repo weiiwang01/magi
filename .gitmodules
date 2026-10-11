@@ -13,3 +13,6 @@
 [submodule "Drivers/cryptoauthlib"]
 	path = firmware/Drivers/cryptoauthlib
 	url = https://github.com/MicrochipTech/cryptoauthlib.git
+[submodule "bootloader/Middlewares/stm32-mw-openbl"]
+	path = bootloader/Middlewares/stm32-mw-openbl
+	url = https://github.com/STMicroelectronics/stm32-mw-openbl.git
