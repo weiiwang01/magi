@@ -1,0 +1,4 @@
+#ifndef INTERFACES_CONF_H
+#define INTERFACES_CONF_H
+#define MEMORIES_SUPPORTED 1U
+#endif

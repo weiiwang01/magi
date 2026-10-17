@@ -37,6 +37,36 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+set(OPENBL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/stm32-mw-openbl)
+target_include_directories(stm32cubemx INTERFACE
+    ${OPENBL_DIR}/Core
+    ${OPENBL_DIR}/Modules/Mem
+    ${OPENBL_DIR}/Modules/USB
+)
+target_compile_definitions(stm32cubemx INTERFACE
+    HAL_TIM_MODULE_ENABLED
+    USBD_DFU_VENDOR_EXIT_ENABLED=1
+)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    Core/Src/usb_hub.c
+    Core/Src/bitbang_i2c.c
+    Core/Src/ws2812.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c
+    Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim_ex.c
+    Core/Src/bootloader.c
+    Core/Src/app_openbootloader.c
+    Core/Src/common_interface.c
+    Core/Src/flash_interface.c
+    Core/Src/usb_interface.c
+    Core/Src/usbd_dfu_if.c
+    ${OPENBL_DIR}/Core/openbl_core.c
+    ${OPENBL_DIR}/Modules/Mem/openbl_mem.c
+    ${OPENBL_DIR}/Modules/USB/openbl_usb_cmd.c
+)
+set_property(TARGET ${CMAKE_PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/STM32G0B1xx_FLASH.ld
+)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths

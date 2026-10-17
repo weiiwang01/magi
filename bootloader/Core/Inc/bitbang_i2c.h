@@ -1,0 +1,1 @@
+../../../firmware/Core/Inc/bitbang_i2c.h

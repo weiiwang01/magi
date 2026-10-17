@@ -100,7 +100,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
     }
 
     /* Peripheral interrupt init */
-    HAL_NVIC_SetPriority(USB_UCPD1_2_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(USB_UCPD1_2_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(USB_UCPD1_2_IRQn);
   /* USER CODE BEGIN USB_DRD_FS_MspInit 1 */
 

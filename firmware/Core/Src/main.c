@@ -91,7 +91,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  /* ES0548 2.2.10: cross-bank execution requires flash prefetch disabled. */
+  __HAL_FLASH_PREFETCH_BUFFER_DISABLE();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/

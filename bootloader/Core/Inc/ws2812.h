@@ -1,0 +1,1 @@
+../../../firmware/Core/Inc/ws2812.h

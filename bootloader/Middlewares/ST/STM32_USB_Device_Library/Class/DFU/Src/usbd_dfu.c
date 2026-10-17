@@ -1293,13 +1293,13 @@ static void DFU_Leave(USBD_HandleTypeDef *pdev)
     hdfu->dev_status[3] = 0U;
     hdfu->dev_status[4] = hdfu->dev_state;
 
-    /* Disconnect the USB device */
-    (void)USBD_Stop(pdev);
-
 #if (USBD_DFU_VENDOR_EXIT_ENABLED == 1U)
     /* Jump should be ensured by user application */
     DfuInterface->LeaveDFU(hdfu->data_ptr);
 #else
+    /* Disconnect the USB device */
+    (void)USBD_Stop(pdev);
+
     /* Generate system reset to allow jumping to the user code */
     NVIC_SystemReset();
 #endif /* USBD_DFU_VENDOR_EXIT_ENABLED */

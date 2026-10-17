@@ -22,7 +22,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "bootloader.h"
+#include "app_openbootloader.h"
+#include "timeout.h"
+#include "usb_hub.h"
+#include "ws2812.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,7 +70,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  /* ES0548 2.2.10: cross-bank execution requires flash prefetch disabled. */
+  __HAL_FLASH_PREFETCH_BUFFER_DISABLE();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -75,14 +80,18 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  OpenBootloader_Init();
+  bootloader_is_enabled();
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  timeout_timer_init();
+  ws2812_init();
+  ws2812_set_rgb(0U, 0U, 0U, 32U);
+  usb_hub_init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -99,6 +108,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    OpenBootloader_ProtocolDetection();
+    bootloader_process();
   }
   /* USER CODE END 3 */
 }

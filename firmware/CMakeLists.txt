@@ -43,6 +43,18 @@ add_custom_target(format
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+target_compile_definitions(stm32cubemx INTERFACE
+    USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=0x10000U
+)
+set_property(TARGET ${CMAKE_PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/STM32G0B1xx_FLASH.ld"
+)
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+            "${CMAKE_CURRENT_BINARY_DIR}/magi.bin"
+    VERBATIM
+)
+
 set(ATCA_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(ATCA_NO_HEAP ON CACHE BOOL "" FORCE)
 set(ATCA_HAL_I2C ON CACHE BOOL "" FORCE)

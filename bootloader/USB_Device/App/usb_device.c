@@ -24,7 +24,7 @@
 #include "usbd_core.h"
 #include "usbd_desc.h"
 #include "usbd_dfu.h"
-#include "usbd_dfu_flash.h"
+#include "usbd_dfu_if.h"
 
 /* USER CODE BEGIN Includes */
 

@@ -1,0 +1,1 @@
+../../../firmware/Core/Inc/usb_hub.h
