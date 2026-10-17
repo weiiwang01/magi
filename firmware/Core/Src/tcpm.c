@@ -298,9 +298,9 @@ tcpm_reset_contract(tcpm_t *tcpm, uint8_t port)
 
 void
 tcpm_get_power_contract(tcpm_t *tcpm,
-                         uint8_t port,
-                         uint32_t *voltage_mv,
-                         uint32_t *current_ma)
+                        uint8_t port,
+                        uint32_t *voltage_mv,
+                        uint32_t *current_ma)
 {
   uint32_t primask = tcpm_lock();
   tcpm_port_t *p = &tcpm->ports[port];

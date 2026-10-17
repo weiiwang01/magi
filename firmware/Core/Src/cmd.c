@@ -329,7 +329,9 @@ cmd_unit3_console_exec(cmd_node_t *cmd, stream_t *stream)
 static const char *
 cmd_crypto_lock_state(uint8_t value)
 {
-  return value == 0 ? "locked" : value == 0x55 ? "unlocked" : "unknown";
+  return value == ATCA_LOCKED     ? "locked"
+         : value == ATCA_UNLOCKED ? "unlocked"
+                                  : "unknown";
 }
 
 static int
@@ -430,15 +432,138 @@ cmd_magi_controller_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
 }
 
 static int
+cmd_magi_controller_crypto_init_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  int result = crypto_lock();
+  if (result != ATCA_SUCCESS)
+    {
+      goto report;
+    }
+  atecc608_config_t config;
+  uint8_t protection_key[ATCA_KEY_SIZE] = { 0 };
+  result = atcab_read_config_zone((uint8_t *)&config);
+  if (result == ATCA_SUCCESS && config.LockConfig == ATCA_LOCKED
+      && config.LockValue == ATCA_LOCKED)
+    {
+      crypto_unlock();
+      return stream_error(
+                 stream_puts(stream, "ATECC608B is already initialized\r\n"))
+                 ? CMD_EXIT_IOERR
+                 : CMD_EXIT_OK;
+    }
+  if (result == ATCA_SUCCESS
+      && (config.LockConfig != ATCA_UNLOCKED
+          || config.LockValue != ATCA_UNLOCKED))
+    {
+      result = ATCA_BAD_PARAM;
+    }
+  if (result == ATCA_SUCCESS)
+    {
+      for (unsigned int slot = 0; slot < 16; ++slot)
+        {
+          if (slot < 8)
+            {
+              config.SlotConfig[slot] = ATCA_SLOT_CONFIG_EXT_SIG_MASK
+                                        | ATCA_SLOT_CONFIG_INT_SIG_MASK
+                                        | ATCA_SLOT_CONFIG_IS_SECRET_MASK
+                                        | ATCA_SLOT_CONFIG_WRITE_KEY(15)
+                                        | ATCA_SLOT_CONFIG_WRITE_CONFIG(6);
+              config.KeyConfig[slot] = ATCA_KEY_CONFIG_PRIVATE_MASK
+                                       | ATCA_KEY_CONFIG_PUB_INFO_MASK
+                                       | ATCA_KEY_CONFIG_KEY_TYPE(4)
+                                       | ATCA_KEY_CONFIG_LOCKABLE_MASK
+                                       | ATCA_KEY_CONFIG_REQ_RANDOM_MASK;
+            }
+          else
+            {
+              config.SlotConfig[slot] = ATCA_SLOT_CONFIG_READKEY(15)
+                                        | ATCA_SLOT_CONFIG_WRITE_KEY(15);
+              config.KeyConfig[slot] = ATCA_KEY_CONFIG_KEY_TYPE(7)
+                                       | ATCA_KEY_CONFIG_LOCKABLE_MASK;
+              if (slot == 15)
+                {
+                  config.SlotConfig[slot] |= ATCA_SLOT_CONFIG_IS_SECRET_MASK;
+                  config.KeyConfig[slot] |= ATCA_KEY_CONFIG_REQ_RANDOM_MASK;
+                }
+            }
+        }
+      result = atcab_write_bytes_zone(ATCA_ZONE_CONFIG,
+                                      0,
+                                      offsetof(atecc608_config_t, SlotConfig),
+                                      (const uint8_t *)config.SlotConfig,
+                                      sizeof(config.SlotConfig));
+    }
+  if (result == ATCA_SUCCESS)
+    {
+      result = atcab_write_bytes_zone(ATCA_ZONE_CONFIG,
+                                      0,
+                                      offsetof(atecc608_config_t, KeyConfig),
+                                      (const uint8_t *)config.KeyConfig,
+                                      sizeof(config.KeyConfig));
+    }
+  if (result == ATCA_SUCCESS)
+    {
+      uint8_t crc[2];
+      atCRC(sizeof(config), (const uint8_t *)&config, crc);
+      result = atcab_lock_config_zone_crc((uint16_t)crc[0]
+                                          | ((uint16_t)crc[1] << 8));
+    }
+  if (result == ATCA_SUCCESS)
+    {
+      result = atcab_lock_data_zone();
+    }
+  for (uint16_t slot = 0; result == ATCA_SUCCESS && slot < 8; ++slot)
+    {
+      result = atcab_genkey(slot, NULL);
+    }
+  if (result == ATCA_SUCCESS)
+    {
+      result = atcab_random(protection_key);
+    }
+  if (result == ATCA_SUCCESS)
+    {
+      result = atcab_write_bytes_zone(
+          ATCA_ZONE_DATA, 15, 0, protection_key, sizeof(protection_key));
+    }
+  atcab_memset_s(
+      protection_key, sizeof(protection_key), 0, sizeof(protection_key));
+  int sleep_result = atcab_wakeup();
+  if (sleep_result == ATCA_SUCCESS)
+    {
+      sleep_result = atcab_sleep();
+    }
+  crypto_unlock();
+  if (result == ATCA_SUCCESS)
+    {
+      result = sleep_result;
+    }
+report:
+  if (result != ATCA_SUCCESS)
+    {
+      return stream_error(stream_printf(stream,
+                                        "ATECC608B initialization failed: %d "
+                                        "(0x%02x), check crypto status\r\n",
+                                        result,
+                                        (unsigned int)(uint8_t)result))
+                 ? CMD_EXIT_IOERR
+                 : 1;
+    }
+  return stream_error(stream_puts(stream, "ATECC608B initialized\r\n"))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
 cmd_usb_power_status_encode(cmd_node_t *cmd, stream_t *stream)
 {
   usb_t usb = container_of(cmd, cmd_usb_node_t, node)->usb;
   uint32_t contract_voltage_mv, contract_current_ma;
-  tcpm_get_power_contract(tcpm, usb, &contract_voltage_mv, &contract_current_ma);
+  tcpm_get_power_contract(
+      tcpm, usb, &contract_voltage_mv, &contract_current_ma);
   uint32_t voltage_mv = adc_get_usb_voltage(usb);
   uint32_t current_ma = adc_get_usb_current_in(usb);
-  uint32_t power_mw = (uint32_t)(((uint64_t)voltage_mv * current_ma + 500U)
-                               / 1000U);
+  uint32_t power_mw
+      = (uint32_t)(((uint64_t)voltage_mv * current_ma + 500U) / 1000U);
   stream_status_t result
       = contract_voltage_mv == 0U
             ? stream_puts(stream, "Established contract: none\r\n")
@@ -733,9 +858,14 @@ static cmd_node_t cmd_magi_controller_ssh = {
   .symbol = "ssh",
   .child = &cmd_ssh_authorized,
 };
+static cmd_node_t cmd_magi_controller_crypto_init = {
+  .symbol = "init",
+  .exec = cmd_magi_controller_crypto_init_exec,
+};
 static cmd_node_t cmd_magi_controller_crypto_status = {
   .symbol = "status",
   .encode = cmd_magi_controller_crypto_status_encode,
+  .next = &cmd_magi_controller_crypto_init,
 };
 static cmd_node_t cmd_magi_controller_crypto = {
   .symbol = "crypto",
@@ -853,22 +983,30 @@ static cmd_usb_node_t cmd_usb1_power_status = {
   .usb = USB1,
 };
 static cmd_node_t cmd_usb0_power = {
-  .symbol = "power", .child = &cmd_usb0_power_status.node,
+  .symbol = "power",
+  .child = &cmd_usb0_power_status.node,
 };
 static cmd_node_t cmd_usb1_power = {
-  .symbol = "power", .child = &cmd_usb1_power_status.node,
+  .symbol = "power",
+  .child = &cmd_usb1_power_status.node,
 };
 static cmd_node_t cmd_usb1 = {
-  .symbol = "1", .child = &cmd_usb1_power,
+  .symbol = "1",
+  .child = &cmd_usb1_power,
 };
 static cmd_node_t cmd_usb0 = {
-  .symbol = "0", .child = &cmd_usb0_power, .next = &cmd_usb1,
+  .symbol = "0",
+  .child = &cmd_usb0_power,
+  .next = &cmd_usb1,
 };
 static cmd_node_t cmd_magi_usb = {
-  .symbol = "usb", .child = &cmd_usb0,
+  .symbol = "usb",
+  .child = &cmd_usb0,
 };
 static cmd_node_t cmd_magi_unit = {
-  .symbol = "unit", .child = &cmd_unit1, .next = &cmd_magi_usb,
+  .symbol = "unit",
+  .child = &cmd_unit1,
+  .next = &cmd_magi_usb,
 };
 
 static cmd_node_t cmd_magi_controller = {
