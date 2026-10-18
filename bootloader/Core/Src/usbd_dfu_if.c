@@ -132,7 +132,7 @@ static uint16_t Dfu_Leave(uint32_t address)
 }
 
 USBD_DFU_MediaTypeDef USBD_DFU_Flash_fops = {
-  .pStrDesc = (const uint8_t *)"@Application Flash /0x08010000/224*002Kg",
+  .pStrDesc = (const uint8_t *)"@Application Flash /0x08010000/208*002Kg",
   .Init = USB_DFU_If_Init,
   .DeInit = USB_DFU_If_DeInit,
   .Erase = USB_DFU_If_Erase,
