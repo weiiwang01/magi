@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "adc.h"
 #include "cdc.h"
+#include "config.h"
 #include "log.h"
 #include "network.h"
 #include "crypto.h"
@@ -118,6 +119,7 @@ int main(void)
   MX_UCPD2_Init();
   /* USER CODE BEGIN 2 */
   log_init();
+  config_load();
   console_init();
   adc_init();
   usb_hub_init();

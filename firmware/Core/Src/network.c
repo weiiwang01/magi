@@ -25,13 +25,14 @@ static SemaphoreHandle_t network_mutex;
 static SemaphoreHandle_t network_config_mutex;
 static TaskHandle_t network_task_handle;
 static struct netif network_netif;
-static char network_hostname[NETWORK_HOSTNAME_MAX + 1] = "magi";
+static char network_hostname[NETWORK_HOSTNAME_MAX + 1];
 static bool network_ready;
 
 static void
 network_config_lock()
 {
-  if (xSemaphoreTake(network_config_mutex, portMAX_DELAY) != pdTRUE)
+  if (network_config_mutex != NULL
+      && xSemaphoreTake(network_config_mutex, portMAX_DELAY) != pdTRUE)
     {
       Error_Handler();
     }
@@ -40,7 +41,8 @@ network_config_lock()
 static void
 network_config_unlock()
 {
-  if (xSemaphoreGive(network_config_mutex) != pdTRUE)
+  if (network_config_mutex != NULL
+      && xSemaphoreGive(network_config_mutex) != pdTRUE)
     {
       Error_Handler();
     }
@@ -51,6 +53,10 @@ network_get_hostname(char hostname[static NETWORK_HOSTNAME_MAX + 1])
 {
   network_config_lock();
   memcpy(hostname, network_hostname, sizeof(network_hostname));
+  if (hostname[0] == '\0')
+    {
+      network_default_hostname(hostname);
+    }
   network_config_unlock();
 }
 
@@ -218,6 +224,13 @@ network_format_hostname(char hostname[static NETWORK_HOSTNAME_SIZE],
       words[2] >>= 5;
     }
   hostname[NETWORK_HOSTNAME_SIZE - 1U] = '\0';
+}
+
+void
+network_default_hostname(char hostname[static NETWORK_HOSTNAME_SIZE])
+{
+  const uint32_t uid[] = { HAL_GetUIDw0(), HAL_GetUIDw1(), HAL_GetUIDw2() };
+  network_format_hostname(hostname, uid);
 }
 
 static void
@@ -468,8 +481,10 @@ network_init()
     {
       return;
     }
-  const uint32_t uid[] = { HAL_GetUIDw0(), HAL_GetUIDw1(), HAL_GetUIDw2() };
-  network_format_hostname(network_hostname, uid);
+  if (network_hostname[0] == '\0')
+    {
+      network_default_hostname(network_hostname);
+    }
 
   network_mutex = xSemaphoreCreateMutex();
   network_config_mutex = xSemaphoreCreateMutex();

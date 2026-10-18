@@ -182,6 +182,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/bitbang_i2c.c
     Core/Src/cdc.c
     Core/Src/cmd.c
+    Core/Src/config.c
     Core/Src/console.c
     Core/Src/crypto.c
     Core/Src/cryptoauth_hal.c

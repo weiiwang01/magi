@@ -1,6 +1,7 @@
 #include <stddef.h>
 
 #include "cmd.h"
+#include "config.h"
 
 #include <string.h>
 #include <errno.h>
@@ -18,7 +19,6 @@
 #include "unit.h"
 
 #define CMD_LINE_MAX 512
-#define CMD_SYMBOL_MAX 32
 
 #define CMD_SYMBOL_GET "get"
 #define CMD_SYMBOL_SET "set"
@@ -644,6 +644,53 @@ cmd_magi_controller_hostname_decode(cmd_node_t *cmd, stream_t *stream)
                  ? CMD_EXIT_IOERR
                  : 1;
     }
+  char default_hostname[NETWORK_HOSTNAME_SIZE];
+  network_default_hostname(default_hostname);
+  cmd->dirty = strcmp(hostname, default_hostname) != 0;
+  return CMD_EXIT_OK;
+}
+
+static int
+cmd_magi_controller_hostname_save(cmd_node_t *cmd, stream_t *stream)
+{
+  char hostname[NETWORK_HOSTNAME_MAX + 1];
+  network_get_hostname(hostname);
+  size_t length = strlen(hostname);
+  stream_status_t status = config_write_vint(stream, length);
+  if (stream_error(status) || !(status & STREAM_WRITE_OK))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  return stream_error(stream_puts(stream, hostname)) ? CMD_EXIT_IOERR
+                                                     : CMD_EXIT_OK;
+}
+
+static int
+cmd_magi_controller_hostname_load(cmd_node_t *cmd, stream_t *stream)
+{
+  uint32_t length;
+  stream_status_t status = config_read_vint(stream, &length);
+  if (stream_error(status) || !(status & STREAM_READ_OK) || length == 0
+      || length > NETWORK_HOSTNAME_MAX)
+    {
+      return CMD_EXIT_IOERR;
+    }
+  char hostname[NETWORK_HOSTNAME_MAX + 1];
+  uint32_t count = 0;
+  status = stream_gets(stream, (uint8_t *)hostname, length, &count);
+  if (stream_error(status) || count != length
+      || memchr(hostname, '\0', length) != NULL)
+    {
+      return CMD_EXIT_IOERR;
+    }
+  hostname[length] = '\0';
+  if (network_set_hostname(hostname) != 0)
+    {
+      return CMD_EXIT_IOERR;
+    }
+  char default_hostname[NETWORK_HOSTNAME_SIZE];
+  network_default_hostname(default_hostname);
+  cmd->dirty = strcmp(hostname, default_hostname) != 0;
   return CMD_EXIT_OK;
 }
 
@@ -888,6 +935,8 @@ static cmd_node_t cmd_magi_controller_hostname = {
   .symbol = "hostname",
   .encode = cmd_magi_controller_hostname_encode,
   .decode = cmd_magi_controller_hostname_decode,
+  .save = cmd_magi_controller_hostname_save,
+  .load = cmd_magi_controller_hostname_load,
   .next = &cmd_magi_controller_echo,
 };
 
@@ -999,9 +1048,49 @@ static cmd_node_t cmd_usb0 = {
   .child = &cmd_usb0_power,
   .next = &cmd_usb1,
 };
+static int
+cmd_magi_config_save_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  if (config_save() != 0)
+    {
+      stream_puts(stream, "Failed to save configuration\r\n");
+      return CMD_EXIT_IOERR;
+    }
+  return stream_error(stream_puts(stream, "Configuration saved\r\n"))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_magi_config_reset_exec(cmd_node_t *cmd, stream_t *stream)
+{
+  if (config_reset() != 0)
+    {
+      stream_puts(stream, "Failed to reset configuration\r\n");
+      return CMD_EXIT_IOERR;
+    }
+  return stream_error(stream_puts(stream, "Configuration reset\r\n"))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static cmd_node_t cmd_magi_config_reset = {
+  .symbol = "reset",
+  .exec = cmd_magi_config_reset_exec,
+};
+static cmd_node_t cmd_magi_config_save = {
+  .symbol = "save",
+  .exec = cmd_magi_config_save_exec,
+  .next = &cmd_magi_config_reset,
+};
+static cmd_node_t cmd_magi_config = {
+  .symbol = "config",
+  .child = &cmd_magi_config_save,
+};
 static cmd_node_t cmd_magi_usb = {
   .symbol = "usb",
   .child = &cmd_usb0,
+  .next = &cmd_magi_config,
 };
 static cmd_node_t cmd_magi_unit = {
   .symbol = "unit",
@@ -1020,7 +1109,7 @@ static cmd_node_t cmd_root_instance = {
   .child = &cmd_magi_controller,
 };
 
-static cmd_node_t *cmd_root = &cmd_root_instance;
+cmd_node_t *cmd_root = &cmd_root_instance;
 
 typedef enum
 {
@@ -1510,7 +1599,7 @@ cmd_read_symbol(cmd_exec_t *exec)
     }
 }
 
-static cmd_node_t *
+cmd_node_t *
 cmd_search_node(cmd_node_t *cmd, uint8_t *input, uint32_t input_len)
 {
   if (cmd == NULL)

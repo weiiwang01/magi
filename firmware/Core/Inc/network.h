@@ -13,6 +13,7 @@ void network_exti_irq();
 
 void network_get_hostname(char hostname[static NETWORK_HOSTNAME_MAX + 1]);
 int network_set_hostname(const char *hostname);
+void network_default_hostname(char hostname[static NETWORK_HOSTNAME_SIZE]);
 bool network_get_ipv4_address(char value[static NETWORK_ADDRESS_SIZE]);
 bool network_get_ipv6_address(char value[static NETWORK_ADDRESS_SIZE]);
 bool
