@@ -466,7 +466,7 @@ cmd_magi_controller_crypto_init_exec(cmd_node_t *cmd, stream_t *stream)
               config.SlotConfig[slot] = ATCA_SLOT_CONFIG_EXT_SIG_MASK
                                         | ATCA_SLOT_CONFIG_INT_SIG_MASK
                                         | ATCA_SLOT_CONFIG_IS_SECRET_MASK
-                                        | ATCA_SLOT_CONFIG_WRITE_KEY(15)
+                                        | ATCA_SLOT_CONFIG_WRITE_KEY(10)
                                         | ATCA_SLOT_CONFIG_WRITE_CONFIG(6);
               config.KeyConfig[slot] = ATCA_KEY_CONFIG_PRIVATE_MASK
                                        | ATCA_KEY_CONFIG_PUB_INFO_MASK
@@ -480,7 +480,7 @@ cmd_magi_controller_crypto_init_exec(cmd_node_t *cmd, stream_t *stream)
                                         | ATCA_SLOT_CONFIG_WRITE_KEY(15);
               config.KeyConfig[slot] = ATCA_KEY_CONFIG_KEY_TYPE(7)
                                        | ATCA_KEY_CONFIG_LOCKABLE_MASK;
-              if (slot == 15)
+              if (slot == 10)
                 {
                   config.SlotConfig[slot] |= ATCA_SLOT_CONFIG_IS_SECRET_MASK;
                   config.KeyConfig[slot] |= ATCA_KEY_CONFIG_REQ_RANDOM_MASK;
@@ -523,7 +523,7 @@ cmd_magi_controller_crypto_init_exec(cmd_node_t *cmd, stream_t *stream)
   if (result == ATCA_SUCCESS)
     {
       result = atcab_write_bytes_zone(
-          ATCA_ZONE_DATA, 15, 0, protection_key, sizeof(protection_key));
+          ATCA_ZONE_DATA, 10, 0, protection_key, sizeof(protection_key));
     }
   atcab_memset_s(
       protection_key, sizeof(protection_key), 0, sizeof(protection_key));
@@ -885,7 +885,7 @@ cmd_ssh_authorized_decode(cmd_node_t *cmd, stream_t *stream)
           stream,
           error == EINVAL
               ? "Expected a full ECDSA P-256 public key or an empty string\r\n"
-              : "Authorized key write failed: check slot 10 provisioning\r\n");
+              : "Authorized key write failed: check slot 9 provisioning\r\n");
       return error == EINVAL ? CMD_EXIT_MISUSE : CMD_EXIT_IOERR;
     }
   return CMD_EXIT_OK;

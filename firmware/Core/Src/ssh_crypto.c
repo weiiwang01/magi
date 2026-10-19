@@ -9,7 +9,7 @@
 #include <wolfssl/wolfcrypt/ecc.h>
 
 #define SSH_HOST_SLOT 1U
-#define SSH_AUTH_SLOT 10U
+#define SSH_AUTH_SLOT 9U
 
 static const uint8_t ssh_key_prefix[] = {
   0,   0,   0,   19,  'e', 'c', 'd', 's', 'a', '-', 's', 'h', 'a', '2',
