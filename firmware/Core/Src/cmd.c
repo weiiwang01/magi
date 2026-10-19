@@ -1323,6 +1323,12 @@ cmd_line_reset(cmd_line_t *line)
 static cmd_line_status_t
 cmd_line_readline(cmd_line_t *line)
 {
+  enum
+  {
+    ESCAPE_NONE,
+    ESCAPE_START,
+    ESCAPE_SEQUENCE,
+  } escape = ESCAPE_NONE;
   uint8_t c = 0;
   stream_status_t result = 0;
   cmd_line_reset(line);
@@ -1360,6 +1366,7 @@ cmd_line_readline(cmd_line_t *line)
           return CMD_LINE_ABORT;
         case '\b':
         case 0x7f:
+          escape = ESCAPE_NONE;
           if (line->write_count > 0)
             {
               line->write_count--;
@@ -1381,7 +1388,26 @@ cmd_line_readline(cmd_line_t *line)
         default:
           break;
         }
-      if (line->write_count >= CMD_LINE_MAX)
+      bool accept = c >= 0x20 && c <= 0x7e;
+      if (c == 0x1b)
+        {
+          escape = ESCAPE_START;
+          accept = false;
+        }
+      else if (escape == ESCAPE_START)
+        {
+          escape = c == '[' || c == 'O' ? ESCAPE_SEQUENCE : ESCAPE_NONE;
+          accept = false;
+        }
+      else if (escape == ESCAPE_SEQUENCE)
+        {
+          if (c >= 0x40 && c <= 0x7e)
+            {
+              escape = ESCAPE_NONE;
+            }
+          accept = false;
+        }
+      if (accept && line->write_count >= CMD_LINE_MAX)
         {
           while (true)
             {
@@ -1404,11 +1430,14 @@ cmd_line_readline(cmd_line_t *line)
                 }
             }
         }
-      line->line[line->write_count] = c;
-      line->write_count++;
+      if (accept)
+        {
+          line->line[line->write_count] = c;
+          line->write_count++;
+        }
       uint8_t next = 0;
       bool read = true;
-      bool write = true;
+      bool write = accept;
       do
         {
           result = line->io->exchange(
