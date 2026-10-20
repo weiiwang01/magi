@@ -13,6 +13,7 @@
 #include "console.h"
 #include "crypto.h"
 #include "cryptoauthlib.h"
+#include "header.h"
 #include "network.h"
 #include "ssh_server.h"
 #include "tcpm.h"
@@ -727,6 +728,25 @@ cmd_network_ipv6_address_encode(cmd_node_t *cmd, stream_t *stream)
 }
 
 static int
+cmd_magi_controller_version_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  return stream_error(
+             stream_printf(stream,
+                           "Board version: 0x%04x\r\n"
+                           "Bootloader version: %u.%u.%u\r\n"
+                           "Firmware version: %u.%u.%u\r\n",
+                           (unsigned int)HEADER_FIRMWARE->board_version,
+                           (unsigned int)HEADER_BOOTLOADER->major_version,
+                           (unsigned int)HEADER_BOOTLOADER->minor_version,
+                           (unsigned int)HEADER_BOOTLOADER->patch_version,
+                           (unsigned int)HEADER_FIRMWARE->major_version,
+                           (unsigned int)HEADER_FIRMWARE->minor_version,
+                           (unsigned int)HEADER_FIRMWARE->patch_version))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
 cmd_magi_controller_temperature_encode(cmd_node_t *cmd, stream_t *stream)
 {
   int32_t temp = adc_get_temperature();
@@ -940,10 +960,16 @@ static cmd_node_t cmd_magi_controller_hostname = {
   .next = &cmd_magi_controller_echo,
 };
 
+static cmd_node_t cmd_magi_controller_version = {
+  .symbol = "version",
+  .encode = cmd_magi_controller_version_encode,
+  .next = &cmd_magi_controller_hostname,
+};
+
 static cmd_node_t cmd_magi_controller_temperature = {
   .symbol = "temperature",
   .encode = &cmd_magi_controller_temperature_encode,
-  .next = &cmd_magi_controller_hostname,
+  .next = &cmd_magi_controller_version,
 };
 
 static cmd_node_t cmd_unit3_console
@@ -1328,7 +1354,8 @@ cmd_line_readline(cmd_line_t *line)
     ESCAPE_NONE,
     ESCAPE_START,
     ESCAPE_SEQUENCE,
-  } escape = ESCAPE_NONE;
+  } escape
+      = ESCAPE_NONE;
   uint8_t c = 0;
   stream_status_t result = 0;
   cmd_line_reset(line);

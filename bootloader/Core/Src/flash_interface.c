@@ -22,6 +22,7 @@
 #include "app_openbootloader.h"
 #include "common_interface.h"
 #include "flash_interface.h"
+#include "bootloader.h"
 #include <string.h>
 
 static void OPENBL_FLASH_ProgramDoubleWord(uint32_t Address, uint64_t Data);
@@ -106,6 +107,11 @@ void OPENBL_FLASH_Write(uint32_t Address, uint8_t *Data, uint32_t DataLength)
 void OPENBL_FLASH_JumpToAddress(uint32_t Address)
 {
   Function_Pointer jump_to_address;
+
+  if (Address != FLASH_START_ADDRESS || !bootloader_firmware_is_valid())
+  {
+    return;
+  }
 
   OpenBootloader_DeInit();
 

@@ -56,7 +56,8 @@ ENTRY(Reset_Handler)
 MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 144K
-FLASH (rx)      : ORIGIN = 0x8010000, LENGTH = 416K
+FLASH (rx)      : ORIGIN = 0x8010000, LENGTH = 416K - 14
+HEADER (r)     : ORIGIN = ORIGIN(FLASH) + LENGTH(FLASH), LENGTH = 14
 CONFIG (r)      : ORIGIN = 0x8078000, LENGTH = 32K
 }
 
@@ -70,6 +71,12 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Define output sections */
 SECTIONS
 {
+  .header :
+  {
+    KEEP(*(.header))
+  } >HEADER
+  ASSERT(SIZEOF(.header) == LENGTH(HEADER), "Header must be 14 bytes")
+
   /* The startup code goes first into FLASH */
   .isr_vector :
   {

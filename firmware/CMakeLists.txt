@@ -25,7 +25,7 @@ set(CMAKE_PROJECT_NAME magi)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Core project settings
-project(${CMAKE_PROJECT_NAME})
+project(${CMAKE_PROJECT_NAME} VERSION 0.0.1)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM and C languages
@@ -33,6 +33,14 @@ enable_language(C ASM)
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
+
+set(BOARD_VERSION "" CACHE STRING "Board version.")
+if(BOARD_VERSION STREQUAL "")
+    message(FATAL_ERROR "Provide -DBOARD_VERSION=<version>, for example 0x0200")
+endif()
+configure_file(Core/Src/header.c.in header.c @ONLY)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/header.c)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE BOARD_VERSION=${BOARD_VERSION})
 
 add_custom_target(format
     COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/format.cmake"

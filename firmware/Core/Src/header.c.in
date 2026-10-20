@@ -1,0 +1,10 @@
+#include "header.h"
+
+const header_firmware_t header __attribute__((section(".header"), used)) = {
+  .patch_version = @PROJECT_VERSION_PATCH@,
+  .minor_version = @PROJECT_VERSION_MINOR@,
+  .major_version = @PROJECT_VERSION_MAJOR@,
+  .board_version = @BOARD_VERSION@,
+  .reserved = 0x0000,
+  .magic = {'m', 'a', 'g', 'i'},
+};
