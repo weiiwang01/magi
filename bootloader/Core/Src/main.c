@@ -80,17 +80,17 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  OpenBootloader_Init();
-  bootloader_is_enabled();
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  timeout_timer_init();
   ws2812_init();
   ws2812_set_rgb(0U, 0U, 0U, 32U);
+  OpenBootloader_Init();
+  bootloader_is_enabled();
+  timeout_timer_init();
   usb_hub_init();
   /* USER CODE END SysInit */
 
