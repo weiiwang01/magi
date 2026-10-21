@@ -11,6 +11,7 @@
 #include "task.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/errno.h>
@@ -65,7 +66,91 @@ typedef struct
 static void
 config_crc_init(config_crc_t *crc)
 {
-  crc->crc = 0;
+  crc->crc = UINT32_MAX;
+}
+
+static uint32_t
+config_crc_finalize(const config_crc_t *crc)
+{
+  return crc->crc ^ UINT32_MAX;
+}
+
+static uint32_t
+config_crc32_combine(uint32_t crc_a, uint32_t crc_b, size_t length_b)
+{
+  // https://github.com/stbrumme/crc32/blob/master/Crc32.cpp
+
+  // degenerated case
+  if (length_b == 0)
+    return crc_a;
+
+  /// CRC32 => 32 bits
+  const uint32_t crc_bits = 32;
+
+  uint32_t odd[crc_bits];  // odd-power-of-two  zeros operator
+  uint32_t even[crc_bits]; // even-power-of-two zeros operator
+
+  // put operator for one zero bit in odd
+  odd[0] = 0xEDB88320U; // CRC-32 polynomial
+  for (int i = 1; i < (int)crc_bits; i++)
+    odd[i] = 1U << (i - 1);
+
+  // put operator for two zero bits in even
+  // same as gf2_matrix_square(even, odd);
+  for (int i = 0; i < (int)crc_bits; i++)
+    {
+      uint32_t vec = odd[i];
+      even[i] = 0;
+      for (int j = 0; vec != 0; j++, vec >>= 1)
+        if (vec & 1)
+          even[i] ^= odd[j];
+    }
+  // put operator for four zero bits in odd
+  // same as gf2_matrix_square(odd, even);
+  for (int i = 0; i < (int)crc_bits; i++)
+    {
+      uint32_t vec = even[i];
+      odd[i] = 0;
+      for (int j = 0; vec != 0; j++, vec >>= 1)
+        if (vec & 1)
+          odd[i] ^= even[j];
+    }
+
+  // the following loop becomes much shorter if I keep swapping even and odd
+  uint32_t *a = even;
+  uint32_t *b = odd;
+  // apply secondLength zeros to firstCrc32
+  for (; length_b > 0; length_b >>= 1)
+    {
+      // same as gf2_matrix_square(a, b);
+      for (int i = 0; i < (int)crc_bits; i++)
+        {
+          uint32_t vec = b[i];
+          a[i] = 0;
+          for (int j = 0; vec != 0; j++, vec >>= 1)
+            if (vec & 1)
+              a[i] ^= b[j];
+        }
+
+      // apply zeros operator for this bit
+      if (length_b & 1)
+        {
+          // same as firstCrc32 = gf2_matrix_times(a, firstCrc32);
+          uint32_t sum = 0;
+          for (int i = 0; crc_a != 0; i++, crc_a >>= 1)
+            if (crc_a & 1)
+              sum ^= a[i];
+          crc_a = sum;
+        }
+
+      // switch even and odd
+      uint32_t *t = a;
+      a = b;
+      b = t;
+    }
+
+  // return combined crc
+  return crc_a ^ crc_b;
 }
 
 static uint32_t
@@ -82,6 +167,18 @@ config_crc_feed(config_crc_t *crc, uint8_t data)
   crc->crc = crc32_lookup16[(crc->crc ^ (data >> 4)) & 0x0F] ^ (crc->crc >> 4);
 
   return crc->crc;
+}
+
+static void
+config_crc_header(config_crc_t *crc, const uint8_t *header)
+{
+  for (uint32_t index = 0; index < CONFIG_HEADER_SIZE; index++)
+    {
+      bool crc_byte
+          = index >= offsetof(config_slot_t, crc)
+            && index < offsetof(config_slot_t, crc) + sizeof(uint32_t);
+      config_crc_feed(crc, crc_byte ? 0 : header[index]);
+    }
 }
 
 static int
@@ -124,11 +221,12 @@ config_slot_check(config_slot_t *slot)
     {
       return false;
     }
+  config_crc_header(&crc, (const uint8_t *)slot);
   for (uint32_t i = 0; i < size; i++)
     {
       config_crc_feed(&crc, slot->config[i]);
     }
-  return crc.crc == slot->crc;
+  return config_crc_finalize(&crc) == slot->crc;
 }
 
 static stream_status_t
@@ -512,8 +610,15 @@ static int
 config_commit(config_slot_t *slot,
               uint64_t revision,
               uint16_t size,
-              uint32_t crc)
+              config_crc_t crc)
 {
+  uint64_t header[2] = { CONFIG_VERSION | ((uint64_t)size << 16), revision };
+  config_crc_t header_crc;
+  config_crc_init(&header_crc);
+  config_crc_header(&header_crc, (const uint8_t *)header);
+  uint32_t combined_crc = config_crc32_combine(
+      config_crc_finalize(&header_crc), config_crc_finalize(&crc), size);
+  header[0] |= (uint64_t)combined_crc << 32;
   if (HAL_FLASH_Unlock() != HAL_OK)
     {
       return EIO;
@@ -522,10 +627,8 @@ config_commit(config_slot_t *slot,
       FLASH_TYPEPROGRAM_DOUBLEWORD, (uintptr_t)&slot->revision, revision);
   if (status == HAL_OK)
     {
-      uint64_t data
-          = CONFIG_VERSION | ((uint64_t)size << 16) | ((uint64_t)crc << 32);
       status = HAL_FLASH_Program(
-          FLASH_TYPEPROGRAM_DOUBLEWORD, (uintptr_t)slot, data);
+          FLASH_TYPEPROGRAM_DOUBLEWORD, (uintptr_t)slot, header[0]);
     }
   HAL_StatusTypeDef lock_status = HAL_FLASH_Lock();
   if (status != HAL_OK || lock_status != HAL_OK || !config_slot_check(slot))
@@ -590,7 +693,7 @@ config_save_locked()
     {
       return EIO;
     }
-  return config_commit(slot, revision, writer.cursor, writer.crc.crc);
+  return config_commit(slot, revision, writer.cursor, writer.crc);
 }
 
 static void
