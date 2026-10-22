@@ -336,7 +336,7 @@ cmd_crypto_lock_state(uint8_t value)
 }
 
 static int
-cmd_magi_controller_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
+cmd_magi_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
 {
   atecc608_config_t config;
   uint8_t revision[4];
@@ -433,7 +433,7 @@ cmd_magi_controller_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
 }
 
 static int
-cmd_magi_controller_crypto_init_exec(cmd_node_t *cmd, stream_t *stream)
+cmd_magi_crypto_init_exec(cmd_node_t *cmd, stream_t *stream)
 {
   int result = crypto_lock();
   if (result != ATCA_SUCCESS)
@@ -925,24 +925,19 @@ static cmd_node_t cmd_magi_controller_ssh = {
   .symbol = "ssh",
   .child = &cmd_ssh_authorized,
 };
-static cmd_node_t cmd_magi_controller_crypto_init = {
+static cmd_node_t cmd_magi_crypto_init = {
   .symbol = "init",
-  .exec = cmd_magi_controller_crypto_init_exec,
+  .exec = cmd_magi_crypto_init_exec,
 };
-static cmd_node_t cmd_magi_controller_crypto_status = {
+static cmd_node_t cmd_magi_crypto_status = {
   .symbol = "status",
-  .encode = cmd_magi_controller_crypto_status_encode,
-  .next = &cmd_magi_controller_crypto_init,
-};
-static cmd_node_t cmd_magi_controller_crypto = {
-  .symbol = "crypto",
-  .child = &cmd_magi_controller_crypto_status,
-  .next = &cmd_magi_controller_ssh,
+  .encode = cmd_magi_crypto_status_encode,
+  .next = &cmd_magi_crypto_init,
 };
 static cmd_node_t cmd_magi_controller_network = {
   .symbol = "network",
   .child = &cmd_network_ipv4,
-  .next = &cmd_magi_controller_crypto,
+  .next = &cmd_magi_controller_ssh,
 };
 
 static cmd_node_t cmd_magi_controller_echo = {
@@ -1124,10 +1119,16 @@ static cmd_node_t cmd_magi_unit = {
   .next = &cmd_magi_usb,
 };
 
+static cmd_node_t cmd_magi_crypto = {
+  .symbol = "crypto",
+  .child = &cmd_magi_crypto_status,
+  .next = &cmd_magi_unit,
+};
+
 static cmd_node_t cmd_magi_controller = {
   .symbol = "controller",
   .child = &cmd_magi_controller_temperature,
-  .next = &cmd_magi_unit,
+  .next = &cmd_magi_crypto,
 };
 
 static cmd_node_t cmd_root_instance = {
