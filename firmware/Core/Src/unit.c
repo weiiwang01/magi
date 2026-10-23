@@ -1,5 +1,7 @@
 #include "unit.h"
 
+#include <errno.h>
+
 #include "board.h"
 #include "cmsis_os.h"
 #include "console.h"
@@ -14,6 +16,7 @@
   }
 #define UNIT_INSTANCE(n)                                                      \
   {                                                                           \
+    .type = UNIT_TYPE_CM5,                                                    \
     .power = UNIT_GPIO(n, POWER),                                             \
     .pcie_power = UNIT_GPIO(n, PCIE_POWER),                                   \
     .power_button = UNIT_GPIO(n, POWER_BUTTON),                               \
@@ -171,8 +174,10 @@ unit_gpio_init()
     {
       unit_t *unit = &units[i];
       unit_gpio_output_init(&unit->power, GPIO_MODE_OUTPUT_PP, GPIO_PIN_SET);
-      unit_gpio_output_init(
-          &unit->pcie_power, GPIO_MODE_OUTPUT_PP, GPIO_PIN_RESET);
+      unit_gpio_output_init(&unit->pcie_power,
+                            GPIO_MODE_OUTPUT_PP,
+                            unit->type == UNIT_TYPE_CM4 ? GPIO_PIN_SET
+                                                        : GPIO_PIN_RESET);
       unit_gpio_output_init(
           &unit->power_button, GPIO_MODE_OUTPUT_OD, GPIO_PIN_SET);
       unit_gpio_output_init(&unit->rpiboot, GPIO_MODE_OUTPUT_OD, GPIO_PIN_SET);
@@ -208,12 +213,46 @@ unit_init()
     }
 }
 
+int
+unit_set_type(unit_t *unit, unit_type_t type)
+{
+  if (type != UNIT_TYPE_CM5 && type != UNIT_TYPE_CM4)
+    {
+      return EINVAL;
+    }
+  uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+  if (unit->type != type)
+    {
+      unit->type = type;
+      if (unit_initialized)
+        {
+          unit_set_pcie_power(unit,
+                              type == UNIT_TYPE_CM4 && unit_get_power(unit));
+        }
+    }
+  __set_PRIMASK(primask);
+  return 0;
+}
+
+unit_type_t
+unit_get_type(const unit_t *unit)
+{
+  return unit->type;
+}
+
 void
 unit_set_power(unit_t *unit, bool enable)
 {
+  taskENTER_CRITICAL();
   HAL_GPIO_WritePin(unit->power.port,
                     unit->power.pin,
                     enable ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  if (unit->type == UNIT_TYPE_CM4)
+    {
+      unit_set_pcie_power(unit, enable);
+    }
+  taskEXIT_CRITICAL();
 }
 
 bool
@@ -293,7 +332,8 @@ unit_get_power_led(const unit_t *unit)
 {
   return unit_get_3v3(unit)
          && HAL_GPIO_ReadPin(unit->power_led.port, unit->power_led.pin)
-                == GPIO_PIN_SET;
+                == (unit->type == UNIT_TYPE_CM4 ? GPIO_PIN_RESET
+                                                : GPIO_PIN_SET);
 }
 
 bool
@@ -301,7 +341,8 @@ unit_get_activity_led(const unit_t *unit)
 {
   return unit_get_3v3(unit)
          && HAL_GPIO_ReadPin(unit->activity_led.port, unit->activity_led.pin)
-                == GPIO_PIN_SET;
+                == (unit->type == UNIT_TYPE_CM4 ? GPIO_PIN_RESET
+                                                : GPIO_PIN_SET);
 }
 
 static void

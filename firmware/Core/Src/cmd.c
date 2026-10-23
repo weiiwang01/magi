@@ -104,6 +104,92 @@ cmd_read_bool(stream_t *stream, bool *value)
 }
 
 static int
+cmd_unit_type_encode(cmd_node_t *cmd, stream_t *stream)
+{
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  return stream_error(stream_printf(
+             stream, "%s\r\n", unit_type_names[unit_get_type(unit)]))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_type_set(cmd_node_t *cmd, const char *name)
+{
+  for (size_t type = 0;
+       type < sizeof(unit_type_names) / sizeof(unit_type_names[0]);
+       ++type)
+    {
+      if (strcmp(name, unit_type_names[type]) == 0)
+        {
+          unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+          unit_set_type(unit, (unit_type_t)type);
+          cmd->dirty = type != UNIT_TYPE_CM5;
+          return CMD_EXIT_OK;
+        }
+    }
+  return CMD_EXIT_MISUSE;
+}
+
+static int
+cmd_unit_type_decode(cmd_node_t *cmd, stream_t *stream)
+{
+  char input[5];
+  int result = cmd_read_value(stream, input, sizeof(input));
+  if (result != CMD_EXIT_OK)
+    {
+      return result;
+    }
+  if (cmd_unit_type_set(cmd, input) == CMD_EXIT_OK)
+    {
+      return CMD_EXIT_OK;
+    }
+  return stream_error(stream_puts(stream, "Expect cm5 or cm4\r\n"))
+             ? CMD_EXIT_IOERR
+             : CMD_EXIT_MISUSE;
+}
+
+static int
+cmd_unit_type_save(cmd_node_t *cmd, stream_t *stream)
+{
+  unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
+  const char *name = unit_type_names[unit_get_type(unit)];
+  stream_status_t status = config_write_vint(stream, strlen(name));
+  if (stream_error(status) || !(status & STREAM_WRITE_OK))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  return stream_error(stream_puts(stream, name)) ? CMD_EXIT_IOERR
+                                                 : CMD_EXIT_OK;
+}
+
+static int
+cmd_unit_type_load(cmd_node_t *cmd, stream_t *stream)
+{
+  char name[5];
+  uint32_t length;
+  stream_status_t status = config_read_vint(stream, &length);
+  if (stream_error(status) || !(status & STREAM_READ_OK) || length == 0U
+      || length >= sizeof(name))
+    {
+      return CMD_EXIT_IOERR;
+    }
+  uint32_t count = 0;
+  status = stream_gets(stream, (uint8_t *)name, length, &count);
+  if (stream_error(status) || count != length
+      || memchr(name, '\0', length) != NULL)
+    {
+      return CMD_EXIT_IOERR;
+    }
+  name[length] = '\0';
+  if (cmd_unit_type_set(cmd, name) != CMD_EXIT_OK)
+    {
+      return CMD_EXIT_IOERR;
+    }
+  return CMD_EXIT_OK;
+}
+
+static int
 cmd_unit_power_encode(cmd_node_t *cmd, stream_t *stream)
 {
   unit_t *unit = *container_of(cmd, cmd_unit_node_t, node)->unit;
@@ -1035,12 +1121,39 @@ static cmd_unit_node_t cmd_unit3_power = {
   .unit = &unit_3,
 };
 
-static cmd_node_t cmd_unit3
-    = { .symbol = "3", .child = &cmd_unit3_power.node };
+static cmd_unit_node_t cmd_unit1_type = {
+  .node = { .symbol = "type",
+            .encode = cmd_unit_type_encode,
+            .decode = cmd_unit_type_decode,
+            .save = cmd_unit_type_save,
+            .load = cmd_unit_type_load,
+            .next = &cmd_unit1_power.node },
+  .unit = &unit_1,
+};
+static cmd_unit_node_t cmd_unit2_type = {
+  .node = { .symbol = "type",
+            .encode = cmd_unit_type_encode,
+            .decode = cmd_unit_type_decode,
+            .save = cmd_unit_type_save,
+            .load = cmd_unit_type_load,
+            .next = &cmd_unit2_power.node },
+  .unit = &unit_2,
+};
+static cmd_unit_node_t cmd_unit3_type = {
+  .node = { .symbol = "type",
+            .encode = cmd_unit_type_encode,
+            .decode = cmd_unit_type_decode,
+            .save = cmd_unit_type_save,
+            .load = cmd_unit_type_load,
+            .next = &cmd_unit3_power.node },
+  .unit = &unit_3,
+};
+
+static cmd_node_t cmd_unit3 = { .symbol = "3", .child = &cmd_unit3_type.node };
 static cmd_node_t cmd_unit2
-    = { .symbol = "2", .child = &cmd_unit2_power.node, .next = &cmd_unit3 };
+    = { .symbol = "2", .child = &cmd_unit2_type.node, .next = &cmd_unit3 };
 static cmd_node_t cmd_unit1
-    = { .symbol = "1", .child = &cmd_unit1_power.node, .next = &cmd_unit2 };
+    = { .symbol = "1", .child = &cmd_unit1_type.node, .next = &cmd_unit2 };
 static cmd_usb_node_t cmd_usb0_power_status = {
   .node = { .symbol = "status", .encode = cmd_usb_power_status_encode },
   .usb = USB0,

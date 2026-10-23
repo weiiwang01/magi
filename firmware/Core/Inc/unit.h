@@ -9,6 +9,17 @@
 
 #define UNIT_COUNT 3U
 
+typedef enum
+{
+  UNIT_TYPE_CM5 = 0,
+  UNIT_TYPE_CM4 = 1
+} unit_type_t;
+
+static const char *const unit_type_names[] = {
+  [UNIT_TYPE_CM5] = "cm5",
+  [UNIT_TYPE_CM4] = "cm4",
+};
+
 typedef struct
 {
   GPIO_TypeDef *port;
@@ -18,6 +29,7 @@ typedef struct
 typedef struct unit unit_t;
 struct unit
 {
+  unit_type_t type;
   unit_gpio_t power;
   unit_gpio_t pcie_power;
   unit_gpio_t power_button;
@@ -38,6 +50,8 @@ extern unit_t *unit_3;
 void unit_init();
 void unit_exti_irq();
 
+int unit_set_type(unit_t *unit, unit_type_t type);
+unit_type_t unit_get_type(const unit_t *unit);
 void unit_set_power(unit_t *unit, bool enable);
 bool unit_get_power(const unit_t *unit);
 void unit_set_pcie_power(unit_t *unit, bool enable);
