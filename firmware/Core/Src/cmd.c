@@ -353,7 +353,6 @@ cmd_magi_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
                  ? CMD_EXIT_IOERR
                  : 1;
     }
-  uint8_t address = atcab_get_device_address(atcab_get_device()) >> 1;
   result = atcab_info(revision);
   if (result == ATCA_SUCCESS)
     {
@@ -384,13 +383,11 @@ cmd_magi_crypto_status_encode(cmd_node_t *cmd, stream_t *stream)
   serial[8] = config.SN8;
   if (stream_error(stream_printf(
           stream,
-          "ATECC608B\r\nI2C address: 0x%02x (7-bit)\r\n"
           "Revision: %02x%02x%02x%02x\r\n"
           "Serial number: %02x%02x%02x%02x%02x%02x%02x%02x%02x\r\n"
           "AES enable: 0x%02x\r\nConfig zone: %s (0x%02x)\r\n"
           "Data/OTP zone: %s (0x%02x)\r\nSlotLocked: 0x%04x\r\n"
           "Slot  SlotConfig  KeyConfig  Slot lock\r\n",
-          address,
           revision[0],
           revision[1],
           revision[2],

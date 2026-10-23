@@ -56,7 +56,7 @@ ws2812_gpio_init()
   BOARD_WS2812_GPIO_CLK_ENABLE();
 
   gpio_init.Pin = BOARD_WS2812_GPIO_PIN;
-  gpio_init.Mode = GPIO_MODE_AF_PP;
+  gpio_init.Mode = BOARD_WS2812_GPIO_MODE;
   gpio_init.Pull = GPIO_NOPULL;
   gpio_init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.Alternate = BOARD_WS2812_GPIO_AF;

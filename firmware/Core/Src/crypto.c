@@ -6,15 +6,23 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "main.h"
+#include "board.h"
+#if BOARD_VERSION == 0x0200
 #include "xpander.h"
+#endif
 #include <wolfssl/wolfcrypt/port/atmel/atmel.h>
 
 static SemaphoreHandle_t crypto_mutex;
 static bool crypto_ready;
 static ATCAIfaceCfg crypto_config = {
+#if BOARD_VERSION == 0x0200
   .iface_type = ATCA_I2C_IFACE,
-  .devtype = ATECC608,
   .atcai2c = { .address = 0xC0, .bus = 0, .baud = 100000 },
+#else
+  .iface_type = ATCA_SWI_IFACE,
+  .atcaswi = { .bus = 0 },
+#endif
+  .devtype = ATECC608,
   .wake_delay = 1500,
   .rx_retries = 3,
 };
@@ -33,7 +41,9 @@ crypto_free_slot(int slot)
 void
 crypto_init()
 {
+#if BOARD_VERSION == 0x0200
   xpander_init();
+#endif
   crypto_mutex = xSemaphoreCreateRecursiveMutex();
   if (crypto_mutex == NULL)
     {

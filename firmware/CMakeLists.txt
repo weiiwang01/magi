@@ -25,7 +25,7 @@ set(CMAKE_PROJECT_NAME magi)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Core project settings
-project(${CMAKE_PROJECT_NAME} VERSION 0.0.1)
+project(${CMAKE_PROJECT_NAME} VERSION 0.0.2)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM and C languages
@@ -36,8 +36,9 @@ add_executable(${CMAKE_PROJECT_NAME})
 
 set(BOARD_VERSION "" CACHE STRING "Board version.")
 if(BOARD_VERSION STREQUAL "")
-    message(FATAL_ERROR "Provide -DBOARD_VERSION=<version>, for example 0x0200")
+    message(FATAL_ERROR "Provide -DBOARD_VERSION=<version>, for example 0x0201")
 endif()
+math(EXPR MAGI_BOARD_VERSION "${BOARD_VERSION}")
 configure_file(Core/Src/header.c.in header.c @ONLY)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/header.c)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE BOARD_VERSION=${BOARD_VERSION})
@@ -65,7 +66,13 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 
 set(ATCA_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(ATCA_NO_HEAP ON CACHE BOOL "" FORCE)
-set(ATCA_HAL_I2C ON CACHE BOOL "" FORCE)
+if(MAGI_BOARD_VERSION EQUAL 512)
+    set(ATCA_HAL_I2C ON CACHE BOOL "" FORCE)
+    set(ATCA_HAL_SWI_UART OFF CACHE BOOL "" FORCE)
+else()
+    set(ATCA_HAL_I2C OFF CACHE BOOL "" FORCE)
+    set(ATCA_HAL_SWI_UART ON CACHE BOOL "" FORCE)
+endif()
 set(ATCA_ATECC608_SUPPORT ON CACHE BOOL "" FORCE)
 foreach(device ATSHA204A ATSHA206A ATECC108A ATECC508A ECC204 ECC206 TA010 SHA104 SHA105)
     set(ATCA_${device}_SUPPORT OFF CACHE BOOL "" FORCE)
@@ -147,6 +154,12 @@ function(magi_patch_source output source patch_file)
     endif()
 endfunction()
 
+if(ATCA_HAL_SWI_UART)
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE Core/Src/cryptoauth_uart.c)
+else()
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE Core/Src/cryptoauth_i2c.c Core/Src/xpander.c)
+endif()
+
 set(MAGI_ATMEL_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/ports/atmel.c)
 set(MAGI_ECC_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/ports/ecc.c)
 set(MAGI_WOLFSSH_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/ports/internal.c)
@@ -205,7 +218,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/usb.c
     Core/Src/usb_hub.c
     Core/Src/ws2812.c
-    Core/Src/xpander.c
     Drivers/ch390-lwip/ch390.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c
     Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c
