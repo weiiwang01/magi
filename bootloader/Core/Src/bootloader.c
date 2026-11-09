@@ -1,3 +1,4 @@
+#include "board.h"
 #include "bootloader.h"
 #include "header.h"
 #include "stm32g0xx_hal.h"
@@ -30,21 +31,25 @@ bool bootloader_firmware_is_valid(void)
 void bootloader_is_enabled(void)
 {
   GPIO_InitTypeDef button = {0};
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  button.Pin = GPIO_PIN_6;
+
+  BOARD_BUTTON_GPIO_CLK_ENABLE();
+
+  button.Pin = BOARD_BUTTON_GPIO_PIN;
   button.Mode = GPIO_MODE_INPUT;
   button.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOD, &button);
+
+  HAL_GPIO_Init(BOARD_BUTTON_GPIO_PORT, &button);
   HAL_Delay(5U);
 
-  if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_6) == GPIO_PIN_RESET || !bootloader_firmware_is_valid())
+  if (HAL_GPIO_ReadPin(BOARD_BUTTON_GPIO_PORT,
+                       BOARD_BUTTON_GPIO_PIN) == GPIO_PIN_RESET ||
+      !bootloader_firmware_is_valid())
   {
     return;
   }
 
   OPENBL_MEM_JumpToAddress(FLASH_START_ADDRESS);
 }
-
 void bootloader_exit(void)
 {
   bootloader_exited_at = HAL_GetTick();
