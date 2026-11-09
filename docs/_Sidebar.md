@@ -1,5 +1,3 @@
-## Magi documentation
-
-- [Home](./Home.md)
+- [[Home]]
 - How-to
-  - [Use Magi management port](./how-to/management-port.md)
+  - [[Use Magi management port|management-port]]
