@@ -1,0 +1,54 @@
+name: Upload documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/sync-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-docs
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out documentation
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: docs
+
+      - name: Upload to wiki
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          gh auth setup-git --hostname "${GITHUB_SERVER_URL#https://}"
+
+          wiki_dir=$(mktemp -d)
+          git clone --depth=1 "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.wiki.git" "$wiki_dir"
+          
+          rsync -av --delete --exclude='.git' docs/ "$wiki_dir/"
+          
+          cd "$wiki_dir"
+          git add --all --force
+
+          if git diff --cached --quiet; then
+            echo 'wiki is already up to date.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$GITHUB_WORKSPACE" log -1 --format=format:%B | git commit --cleanup=verbatim --file=-
+          git push origin HEAD
