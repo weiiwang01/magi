@@ -1,3 +1,3 @@
 - [[Home]]
 - How-to
-  - [[Use Magi management port|management-port]]
+  - [[Use Magi management port|How to use Magi management port]]

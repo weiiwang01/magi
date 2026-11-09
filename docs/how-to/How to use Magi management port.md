@@ -1,5 +1,3 @@
-# How to use Magi management port
-
 The Magi management port is the USB-C port located at the bottom left of the
 Magi board, near the three unit LEDs and the button.
 
