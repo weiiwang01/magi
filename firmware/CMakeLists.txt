@@ -25,7 +25,7 @@ set(CMAKE_PROJECT_NAME magi)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Core project settings
-project(${CMAKE_PROJECT_NAME} VERSION 0.0.3)
+project(${CMAKE_PROJECT_NAME} VERSION 0.0.4)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM and C languages
@@ -60,7 +60,7 @@ set_property(TARGET ${CMAKE_PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS
 )
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
-            "${CMAKE_CURRENT_BINARY_DIR}/magi.bin"
+            "${CMAKE_CURRENT_BINARY_DIR}/firmware.bin"
     VERBATIM
 )
 
