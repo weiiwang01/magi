@@ -1,0 +1,119 @@
+name: Release firmware and bootloader
+
+on:
+  push:
+    tags:
+      - 'firmware/v*'
+      - 'bootloader/v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event.created == true
+    runs-on: ubuntu-latest
+    outputs:
+      component: ${{ steps.tag.outputs.component }}
+      version: ${{ steps.tag.outputs.version }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Validate release tag
+        id: tag
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^(firmware|bootloader)/v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))$ ]]; then
+            echo '::error::Expected firmware/vX.Y.Z or bootloader/vX.Y.Z.'
+            exit 1
+          fi
+          echo "component=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          echo "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ['0x0200', '0x0201']
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            cmake ninja-build gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi patch
+
+      - name: Configure Release build
+        run: |
+          cmake -S "${{ needs.prepare.outputs.component }}" -B "${{ runner.temp }}/build" -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/${{ needs.prepare.outputs.component }}/cmake/gcc-arm-none-eabi.cmake" \
+            -DCMAKE_BUILD_TYPE=Release -DBOARD_VERSION="${{ matrix.board }}"
+
+      - name: Check versions
+        id: version
+        run: |
+          version=$(sed -n 's/^CMAKE_PROJECT_VERSION:[^=]*=//p' "${{ runner.temp }}/build/CMakeCache.txt")
+          if [[ "$version" != '${{ needs.prepare.outputs.version }}' ]]; then
+            echo '::error::The tag version must match the cmake project version.'
+            exit 1
+          fi
+          board=${{ matrix.board }}
+          echo "board=$((board >> 8)).$((board & 0xff))" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          cmake --build "${{ runner.temp }}/build" --parallel 2
+          mkdir -p dist
+          name='magi_${{ needs.prepare.outputs.component }}-${{ needs.prepare.outputs.version }}_board-${{ steps.version.outputs.board }}'
+          cp "${{ runner.temp }}/build/${{ needs.prepare.outputs.component }}.bin" "dist/$name.bin"
+          cp "${{ runner.temp }}/build/${{ needs.prepare.outputs.component }}.elf" "dist/$name.elf"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.board }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all board builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: |
+          sha256sum -- *.bin *.elf > SHA256SUMS
+          sha256sum --check SHA256SUMS
+
+      - name: Publish release for existing tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            printf '```\n'
+            cat dist/SHA256SUMS
+            printf '```\n'
+          } > "${{ runner.temp }}/release-notes.md"
+          gh release create '${{ needs.prepare.outputs.tag }}' dist/*.bin dist/*.elf dist/SHA256SUMS \
+            --repo '${{ github.repository }}' --verify-tag \
+            --title '${{ needs.prepare.outputs.component }} v${{ needs.prepare.outputs.version }}' \
+            --notes-file "${{ runner.temp }}/release-notes.md" --latest=false
